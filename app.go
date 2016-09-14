@@ -228,13 +228,13 @@ func dumpCollectionTo(connStr string, database, collection string, writer io.Wri
 }
 
 func restoreCollectionFrom(connStr, database, collection string, reader io.Reader) error {
-	session, err := mgo.Dial(connStr)
+	session, err := mgo.DialWithTimeout(connStr, 5*time.Minute)
 	if err != nil {
 		return err
 	}
 	defer session.Close()
 
-	err = dropCollectionIfExists(session, database, collection)
+	err = clearCollection(session, database, collection)
 	if err != nil {
 		return err
 	}
@@ -301,11 +301,12 @@ func readNextBSON(reader io.Reader) ([]byte, error) {
 	return buf, nil
 }
 
-func dropCollectionIfExists(session *mgo.Session, database, collection string) error {
-	err := session.DB(database).C(collection).DropCollection()
-	if err != nil && err.Error() == "ns not found" {
-		err = nil
-	}
+func clearCollection(session *mgo.Session, database, collection string) error {
+	start := time.Now()
+	log.Printf("clearing collection %s/%s\n", database, collection)
+	_, err := session.DB(database).C(collection).RemoveAll(nil)
+	log.Printf("finished clearing collection %s/%s. Duration : %v\n", database, collection, time.Now().Sub(start))
+
 	return err
 }
 
