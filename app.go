@@ -17,6 +17,8 @@ import (
 	"gopkg.in/mgo.v2/bson"
 )
 
+const extension = ".bson.snappy"
+
 func main() {
 	app := cli.App("mongolizer", "Backup and restore mongodb collections to/from s3\nBackups are put in a directory structure /<base-dir>/<date>/database/collection")
 
@@ -142,7 +144,7 @@ func (m *mongolizer) backup(dir, database, collection string) error {
 	start := time.Now()
 	log.Printf("backing up %s/%s to %s in %s", database, collection, dir, m.s3bucket)
 
-	path := filepath.Join(dir, database, collection)
+	path := filepath.Join(dir, database, collection+extension)
 
 	b := m.s3.Bucket(m.s3bucket)
 	w, err := b.PutWriter(path, nil, nil)
@@ -182,7 +184,7 @@ func (m *mongolizer) restoreAll(dateDir string, colls string) error {
 
 func (m *mongolizer) restore(dir, database, collection string) error {
 
-	path := filepath.Join(dir, database, collection)
+	path := filepath.Join(dir, database, collection+extension)
 
 	rc, _, err := m.s3.Bucket(m.s3bucket).GetReader(path, nil)
 	if err != nil {
