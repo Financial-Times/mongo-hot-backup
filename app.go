@@ -239,11 +239,6 @@ func restoreCollectionFrom(connStr, database, collection string, reader io.Reade
 		return err
 	}
 
-	err = createCollection(session, database, collection)
-	if err != nil {
-		return err
-	}
-
 	start := time.Now()
 	log.Printf("starting restore of %s/%s\n", database, collection)
 
@@ -312,23 +307,6 @@ func dropCollectionIfExists(session *mgo.Session, database, collection string) e
 		err = nil
 	}
 	return err
-}
-
-func createCollection(session *mgo.Session, database, collection string) error {
-	command := bson.D{{"create", collection}}
-
-	res := bson.M{}
-	err := session.DB(database).Run(command, &res)
-	if err != nil {
-		return err
-	}
-	result := res["ok"]
-	if resf64, ok := result.(float64); ok && resf64 == 1 {
-		return nil
-
-	}
-	log.Printf("DEBUG result is %v %T\n", result, result)
-	return fmt.Errorf("failed to create collection: %v", res["errmsg"])
 }
 
 type collName struct {
