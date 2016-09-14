@@ -139,10 +139,11 @@ func (m *mongolizer) backupAll(colls string) error {
 	}
 	return nil
 }
+
 func (m *mongolizer) backup(dir, database, collection string) error {
 
 	start := time.Now()
-	log.Printf("backing up %s/%s to %s in %s", database, collection, dir, m.s3bucket)
+	log.Printf("backing up %s/%s to %s in %s\n", database, collection, dir, m.s3bucket)
 
 	path := filepath.Join(dir, database, collection+extension)
 
@@ -163,7 +164,7 @@ func (m *mongolizer) backup(dir, database, collection string) error {
 		return err
 	}
 	err = w.Close()
-	log.Printf("backed up %s/%s to %s in %s. Duration : %v", database, collection, dir, m.s3bucket, time.Now().Sub(start))
+	log.Printf("backed up %s/%s to %s in %s. Duration : %v\n", database, collection, dir, m.s3bucket, time.Now().Sub(start))
 	return err
 }
 
@@ -243,6 +244,9 @@ func restoreCollectionFrom(connStr, database, collection string, reader io.Reade
 		return err
 	}
 
+	start := time.Now()
+	log.Printf("starting restore of %s/%s\n", database, collection)
+
 	bulk := session.DB(database).C(collection).Bulk()
 
 	var count int
@@ -266,6 +270,7 @@ func restoreCollectionFrom(connStr, database, collection string, reader io.Reade
 		count++
 	}
 	_, err = bulk.Run()
+	log.Printf("finished restore of %s/%s. Duration: %v\n", database, collection, time.Now().Sub(start))
 	return err
 
 }
