@@ -263,6 +263,7 @@ func restoreCollectionFrom(connStr, database, collection string, reader io.Reade
 				return err
 			}
 			bulk = session.DB(database).C(collection).Bulk()
+			batchBytes = 0
 		}
 
 		bulk.Insert(bson.Raw{Data: next})
