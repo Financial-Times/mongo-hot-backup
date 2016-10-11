@@ -244,7 +244,7 @@ func restoreCollectionFrom(connStr, database, collection string, reader io.Reade
 
 	bulk := session.DB(database).C(collection).Bulk()
 
-	var count int
+	var batchBytes int
 	for {
 		next, err := readNextBSON(reader)
 		if err != nil {
@@ -254,15 +254,21 @@ func restoreCollectionFrom(connStr, database, collection string, reader io.Reade
 			break
 		}
 
-		bulk.Insert(bson.Raw{Data: next})
-		if count != 0 && count%1024 == 0 {
+		// If we have something to write and the next doc would push the batch over
+		// the limit, write the batch out now. 15000000 is intended to be within the
+		// expected 16MB limit
+		if batchBytes > 0 && batchBytes+len(next) > 15000000 {
 			_, err = bulk.Run()
 			if err != nil {
 				return err
 			}
 			bulk = session.DB(database).C(collection).Bulk()
+			batchBytes = 0
 		}
-		count++
+
+		bulk.Insert(bson.Raw{Data: next})
+
+		batchBytes += len(next)
 	}
 	_, err = bulk.Run()
 	log.Printf("finished restore of %s/%s. Duration: %v\n", database, collection, time.Now().Sub(start))
