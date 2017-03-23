@@ -9,14 +9,13 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
 	"github.com/jawher/mow.cli"
-	"github.com/klauspost/compress/snappy"
 	"github.com/rlmcpherson/s3gof3r"
+	"net/http"
+	"github.com/klauspost/compress/snappy"
+	"gopkg.in/robfig/cron.v2"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-
-	"net/http"
 )
 
 
@@ -68,6 +67,28 @@ func main() {
 		Desc:      "AWS secret access key",
 		EnvVar:    "AWS_SECRET_ACCESS_KEY",
 		HideValue: true,
+	})
+
+	app.Command("scheduled-backup", "backup a set of mongodb collections", func(cmd *cli.Cmd) {
+		colls := cmd.String(cli.StringArg{
+			Name:   "COLLECTIONS",
+			Desc:   "Collections to process (comma separated <database>/<collection>)",
+			EnvVar: "MONGODB_COLLECTIONS",
+			Value:  "foo/content,foo/bar",
+		})
+
+		cronExpr :=cmd.String(cli.StringOpt{
+			Name:   "cron",
+			Desc:   "Cron expression for when to run",
+			EnvVar: "CRON",
+			Value:  "30 10 * * *",
+		})
+		cmd.Action = func() {
+			m := newMongolizer(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
+			if err := m.backupScheduled(*colls, *cronExpr); err != nil {
+				log.Fatalf("backup failed : %v\n", err)
+			}
+		}
 	})
 
 	app.Command("backup", "backup a set of mongodb collections", func(cmd *cli.Cmd) {
@@ -146,6 +167,29 @@ func (m *mongolizer) backupAll(colls string) error {
 		}
 	}
 	return nil
+}
+
+func (m *mongolizer) backupScheduled(colls string, cronExpr string) error {
+
+	_, err := parseCollections(colls)
+	if err != nil {
+		return err
+	}
+
+	errs := make(chan error)
+
+	c:= cron.New()
+	c.AddFunc(cronExpr, func(){
+		if err := m.backupAll(colls); err != nil {
+			errs <- err
+		}
+		log.Printf("Next scheduled run: %v\n", c.Entries()[0].Next)
+	})
+	c.Start()
+	
+	log.Printf("Next scheduled run: %v\n", c.Entries()[0].Next)
+
+	return <- errs
 }
 
 func (m *mongolizer) backup(dir, database, collection string) error {
