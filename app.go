@@ -3,22 +3,22 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/boltdb/bolt"
+	"github.com/jawher/mow.cli"
+	"github.com/klauspost/compress/snappy"
+	"github.com/rlmcpherson/s3gof3r"
+	"github.com/utilitywarehouse/go-operational/op"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
+	cron "gopkg.in/robfig/cron.v2"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
-	"github.com/jawher/mow.cli"
-	"github.com/rlmcpherson/s3gof3r"
-	"net/http"
-	"github.com/klauspost/compress/snappy"
-	"gopkg.in/robfig/cron.v2"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 )
-
-
 
 const extension = ".bson.snappy"
 
@@ -77,15 +77,15 @@ func main() {
 			Value:  "foo/content,foo/bar",
 		})
 
-		cronExpr :=cmd.String(cli.StringOpt{
+		cronExpr := cmd.String(cli.StringOpt{
 			Name:   "cron",
 			Desc:   "Cron expression for when to run",
 			EnvVar: "CRON",
-			Value:  "30 10 * * *",
+			Value:  "@every 10s",
 		})
 		cmd.Action = func() {
 			m := newMongolizer(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
-			if err := m.backupScheduled(*colls, *cronExpr); err != nil {
+			if err := m.backupScheduled(*colls, *cronExpr, "my.db"); err != nil {
 				log.Fatalf("backup failed : %v\n", err)
 			}
 		}
@@ -169,27 +169,101 @@ func (m *mongolizer) backupAll(colls string) error {
 	return nil
 }
 
-func (m *mongolizer) backupScheduled(colls string, cronExpr string) error {
+type scheduledJob struct {
+	eId  cron.EntryID
+	coll collName
+}
 
-	_, err := parseCollections(colls)
+func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath string) error {
+
+	db, err := bolt.Open(dbPath, 0600, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	db.Update(func(tx *bolt.Tx) error {
+		_, err := tx.CreateBucketIfNotExists([]byte("Results"))
+		if err != nil {
+			return fmt.Errorf("create bucket: %s", err)
+		}
+		return nil
+	})
+
+	parsed, err := parseCollections(colls)
 	if err != nil {
 		return err
 	}
 
-	errs := make(chan error)
+	c := cron.New()
 
-	c:= cron.New()
-	c.AddFunc(cronExpr, func(){
-		if err := m.backupAll(colls); err != nil {
-			errs <- err
-		}
-		log.Printf("Next scheduled run: %v\n", c.Entries()[0].Next)
-	})
+	var ids []scheduledJob
+
+	for _, collection := range parsed {
+
+		coll := collection
+
+		eId, _ := c.AddFunc(cronExpr, func() {
+			dateDir := formattedNow()
+			dir := filepath.Join(m.s3dir, dateDir)
+			err := m.backup(dir, coll.database, coll.collection)
+
+			if err == nil {
+				db.Update(func(tx *bolt.Tx) error {
+					b := tx.Bucket([]byte("Results"))
+					err := b.Put([]byte(fmt.Sprintf("%s/%s", coll.database, coll.collection)), []byte(time.Now().Format(time.RFC3339)))
+					return err
+				})
+			}
+
+			for _, job := range ids {
+				if job.coll.database == coll.database && job.coll.collection == coll.collection {
+					log.Printf("Next scheduled run for '%s/%s': %v\n", job.coll.database, job.coll.collection, c.Entry(job.eId).Next)
+				}
+			}
+		})
+
+		ids = append(ids, scheduledJob{eId, coll})
+	}
+
 	c.Start()
-	
+
+	opHandler := op.NewStatus("Mongolizer", "backs up mongo on schedule").
+		ReadyAlways()
+
+	for _, job := range ids {
+		log.Printf("Next scheduled run for '%s/%s': %v\n", job.coll.database, job.coll.collection, c.Entry(job.eId).Next)
+		opHandler.AddChecker(fmt.Sprintf("%s/%s", job.coll.database, job.coll.collection), func(cr *op.CheckResponse) {
+
+			coll := job.coll
+			db.View(func(tx *bolt.Tx) error {
+				b := tx.Bucket([]byte("Results"))
+				v := b.Get([]byte(fmt.Sprintf("%s/%s", coll.database, coll.collection)))
+
+				backupTime, err := time.Parse(time.RFC3339, string(v)); if err != nil {
+					cr.Degraded("Could not find backup time", "Check backup was taken")
+					return nil
+				}
+
+				if time.Since(backupTime).Hours() > 13 {
+					cr.Unhealthy("No backup for more than 13h", "Check backup was taken", "Stale backup data")
+					return nil
+				}
+
+				cr.Healthy(fmt.Sprintf("Backed up %.0f hours ago", time.Since(backupTime).Hours()))
+				return nil
+			})
+		})
+	}
+
+	http.Handle("/__/", op.NewHandler(opHandler))
+
+	http.ListenAndServe(":8080", nil)
+
 	log.Printf("Next scheduled run: %v\n", c.Entries()[0].Next)
 
-	return <- errs
+	return nil
+
 }
 
 func (m *mongolizer) backup(dir, database, collection string) error {
