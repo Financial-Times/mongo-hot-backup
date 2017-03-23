@@ -15,11 +15,18 @@ import (
 	"github.com/rlmcpherson/s3gof3r"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+
+	"net/http"
 )
+
+
 
 const extension = ".bson.snappy"
 
 func main() {
+
+	s3gof3r.DefaultConfig.Md5Check = false
+
 	app := cli.App("mongolizer", "Backup and restore mongodb collections to/from s3\nBackups are put in a directory structure /<base-dir>/<date>/database/collection")
 
 	connStr := app.String(cli.StringOpt{
@@ -133,6 +140,7 @@ func (m *mongolizer) backupAll(colls string) error {
 	for _, coll := range parsed {
 		dir := filepath.Join(m.s3dir, dateDir)
 		err := m.backup(dir, coll.database, coll.collection)
+
 		if err != nil {
 			return err
 		}
@@ -148,7 +156,7 @@ func (m *mongolizer) backup(dir, database, collection string) error {
 	path := filepath.Join(dir, database, collection+extension)
 
 	b := m.s3.Bucket(m.s3bucket)
-	w, err := b.PutWriter(path, nil, nil)
+	w, err := b.PutWriter(path, http.Header{"x-amz-server-side-encryption": []string{"AES256"}}, nil)
 	if err != nil {
 		return err
 	}
@@ -163,6 +171,7 @@ func (m *mongolizer) backup(dir, database, collection string) error {
 	if err := sw.Close(); err != nil {
 		return err
 	}
+
 	err = w.Close()
 	log.Printf("backed up %s/%s to %s in %s. Duration : %v\n", database, collection, dir, m.s3bucket, time.Now().Sub(start))
 	return err
