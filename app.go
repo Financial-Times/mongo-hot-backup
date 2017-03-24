@@ -202,12 +202,12 @@ func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath strin
 	err := os.MkdirAll(filepath.Dir(dbPath), 0600)
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	db, err := bolt.Open(dbPath, 0600, nil)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer db.Close()
 
