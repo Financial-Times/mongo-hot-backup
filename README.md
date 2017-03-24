@@ -135,4 +135,15 @@ spec:
 
 ```
 
+### Prom and alerts
 
+To get metrics you can use query similar to
+
+```
+1 - avg(mongolizer_status{kubernetes_namespace="default"}) by (app, database, collection) < bool 1
+```
+
+Example alert
+
+```
+```
