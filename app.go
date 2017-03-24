@@ -95,10 +95,10 @@ func main() {
 		})
 
 		run := cmd.Bool(cli.BoolOpt{
-			Name:		"run",
-			Desc:		"Run backups on startup?",
-			EnvVar:	"RUN",
-			Value: 	true,
+			Name:   "run",
+			Desc:   "Run backups on startup?",
+			EnvVar: "RUN",
+			Value:  true,
 		})
 
 		cmd.Action = func() {
@@ -327,8 +327,6 @@ func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath strin
 	}
 
 	c.Start()
-
-
 
 	for _, job := range ids {
 		// on startup we report when the next run is expected
