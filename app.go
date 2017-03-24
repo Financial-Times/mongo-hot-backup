@@ -84,7 +84,7 @@ func main() {
 			Desc:   "Cron expression for when to run",
 			EnvVar: "CRON",
 			Value:  "30 10 * * *",
-			//Value:  "@every 10s",
+			//Value:  "@every 30s",
 		})
 
 		dbPath := cmd.String(cli.StringOpt{
@@ -94,9 +94,16 @@ func main() {
 			Value:  "/var/data/mongolizer/state.db",
 		})
 
+		run := cmd.Bool(cli.BoolOpt{
+			Name:		"run",
+			Desc:		"Run backups on startup?",
+			EnvVar:	"RUN",
+			Value: 	true,
+		})
+
 		cmd.Action = func() {
 			m := newMongolizer(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
-			if err := m.backupScheduled(*colls, *cronExpr, *dbPath); err != nil {
+			if err := m.backupScheduled(*colls, *cronExpr, *dbPath, *run); err != nil {
 				log.Fatalf("backup failed : %v\n", err)
 			}
 		}
@@ -190,7 +197,7 @@ type scheduledJobResult struct {
 	Timestamp time.Time
 }
 
-func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath string) error {
+func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath string, run bool) error {
 
 	err := os.MkdirAll(filepath.Dir(dbPath), 0600)
 
@@ -224,13 +231,17 @@ func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath strin
 		Help: "Captures whether last backup was ok or not",
 	}, []string{"database", "collection"})
 
+	opHandler := op.NewStatus("Mongolizer", "backs up mongo on schedule").
+		ReadyAlways().
+		AddMetrics(metric)
+
 	var ids []scheduledJob
 
 	for _, collection := range parsed {
 
 		coll := collection
 
-		eId, _ := c.AddFunc(cronExpr, func() {
+		cronFunc := func() {
 			dateDir := formattedNow()
 			dir := filepath.Join(m.s3dir, dateDir)
 			err := m.backup(dir, coll.database, coll.collection)
@@ -250,45 +261,33 @@ func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath strin
 				err := b.Put([]byte(fmt.Sprintf("%s/%s", coll.database, coll.collection)), r)
 				return err
 			})
+		}
 
-			for _, job := range ids {
-				if job.coll.database == coll.database && job.coll.collection == coll.collection {
-					log.Printf("Next scheduled run for '%s/%s': %v\n", job.coll.database, job.coll.collection, c.Entry(job.eId).Next)
-				}
-			}
-		})
-
-		ids = append(ids, scheduledJob{eId, coll})
-	}
-
-	c.Start()
-
-	opHandler := op.NewStatus("Mongolizer", "backs up mongo on schedule").
-		ReadyAlways().AddMetrics(metric)
-
-	for _, job := range ids {
-
+		// on startup, we are registering status metrics to notify prom of the last backup status immediately
+		// we are also checking how long has it been since last backup, and if more than 13h we will trigger backup immediately
 		db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket([]byte("Results"))
-			v := b.Get([]byte(fmt.Sprintf("%s/%s", job.coll.database, job.coll.collection)))
+			v := b.Get([]byte(fmt.Sprintf("%s/%s", coll.database, coll.collection)))
 
 			result := scheduledJobResult{}
 
 			json.Unmarshal(v, &result)
 
 			if !result.Success {
-				metric.With(prometheus.Labels{"database": job.coll.database, "collection": job.coll.collection}).Set(0)
-				return nil
+				metric.With(prometheus.Labels{"database": coll.database, "collection": coll.collection}).Set(0)
 			} else {
-				metric.With(prometheus.Labels{"database": job.coll.database, "collection": job.coll.collection}).Set(1)
-				return nil
+				metric.With(prometheus.Labels{"database": coll.database, "collection": coll.collection}).Set(1)
 			}
 
+			if time.Since(result.Timestamp).Hours() > 13 && run {
+				go cronFunc()
+			}
+
+			return nil
 		})
 
-		log.Printf("Next scheduled run for '%s/%s': %v\n", job.coll.database, job.coll.collection, c.Entry(job.eId).Next)
-		opHandler.AddChecker(fmt.Sprintf("%s/%s", job.coll.database, job.coll.collection), func(cr *op.CheckResponse) {
-			coll := job.coll
+		//each time health endpoint is called we will pull the latest backup state from DB and report based on that
+		opHandler.AddChecker(fmt.Sprintf("%s/%s", coll.database, coll.collection), func(cr *op.CheckResponse) {
 			db.View(func(tx *bolt.Tx) error {
 				b := tx.Bucket([]byte("Results"))
 				v := b.Get([]byte(fmt.Sprintf("%s/%s", coll.database, coll.collection)))
@@ -311,13 +310,34 @@ func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath strin
 				return nil
 			})
 		})
+
+		eId, _ := c.AddFunc(cronExpr, func() { //now we add the cron methods
+
+			cronFunc()
+
+			for _, job := range ids {
+				if job.coll.database == coll.database && job.coll.collection == coll.collection {
+					// we find the current job on the list and report next scheduled run
+					log.Printf("Next scheduled run for '%s/%s': %v\n", job.coll.database, job.coll.collection, c.Entry(job.eId).Next)
+				}
+			}
+		})
+
+		ids = append(ids, scheduledJob{eId, coll})
+	}
+
+	c.Start()
+
+
+
+	for _, job := range ids {
+		// on startup we report when the next run is expected
+		log.Printf("Next scheduled run for '%s/%s': %v\n", job.coll.database, job.coll.collection, c.Entry(job.eId).Next)
 	}
 
 	http.Handle("/__/", op.NewHandler(opHandler))
 
 	http.ListenAndServe(":8080", nil)
-
-	log.Printf("Next scheduled run: %v\n", c.Entries()[0].Next)
 
 	return nil
 
