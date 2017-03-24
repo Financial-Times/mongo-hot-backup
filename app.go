@@ -337,10 +337,9 @@ func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath strin
 
 	http.Handle("/__/", op.NewHandler(opHandler))
 
-	http.ListenAndServe(":8080", nil)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 
 	return nil
-
 }
 
 func (m *mongolizer) backup(dir, database, collection string) error {
