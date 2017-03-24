@@ -15,4 +15,4 @@ RUN apk add --update bash \
 
 EXPOSE 8080
 
-CMD [ "/mongolizer", "backup"  ]
+CMD [ "/mongolizer", "scheduled-backup"  ]
