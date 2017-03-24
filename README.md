@@ -15,11 +15,11 @@ mongolizer --help
 
 You can deploy a docker container that will run backups on schedule (default at 10:30am every day)
 
-The state of backups is kept in a boldb file at `/var/data/mongolizer/state.db`
+The state of backups is kept in a boltdb file at `/var/data/mongolizer/state.db`
 
 Health endpoint is available at `0.0.0.0:8080/__/health` and will report healthy if there was a successful backup in the last 13h.
 
-Instrumentation endpoint is available at `0.0.0.0:8080/__/metrics`, a prom gauge is exposed where the value of `mongolizer_status` gaige is either 1 or 0 depending on result of the previous backup.
+Instrumentation endpoint is available at `0.0.0.0:8080/__/metrics`, a prom gauge is exposed where the value of `mongolizer_status` gauge is either 1 or 0 depending on result of the previous backup. Gauge is labbeled with `database` and collection `labels`.
 
 An initial backup will be ran if there's no backup found in the last 13h.
 
