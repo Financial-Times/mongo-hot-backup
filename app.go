@@ -72,8 +72,8 @@ func main() {
 	})
 
 	app.Command("scheduled-backup", "backup a set of mongodb collections", func(cmd *cli.Cmd) {
-		colls := cmd.String(cli.StringArg{
-			Name:   "COLLECTIONS",
+		colls := cmd.String(cli.StringOpt{
+			Name:   "collections",
 			Desc:   "Collections to process (comma separated <database>/<collection>)",
 			EnvVar: "MONGODB_COLLECTIONS",
 			Value:  "foo/content,foo/bar",
