@@ -2,10 +2,12 @@ package main
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"github.com/boltdb/bolt"
 	"github.com/jawher/mow.cli"
 	"github.com/klauspost/compress/snappy"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rlmcpherson/s3gof3r"
 	"github.com/utilitywarehouse/go-operational/op"
 	"gopkg.in/mgo.v2"
@@ -81,11 +83,20 @@ func main() {
 			Name:   "cron",
 			Desc:   "Cron expression for when to run",
 			EnvVar: "CRON",
-			Value:  "@every 10s",
+			Value:  "30 10 * * *",
+			//Value:  "@every 10s",
 		})
+
+		dbPath := cmd.String(cli.StringOpt{
+			Name:   "dbPath",
+			Desc:   "Path to store boltdb file",
+			EnvVar: "DBPATH",
+			Value:  "/var/data/mongolizer/state.db",
+		})
+
 		cmd.Action = func() {
 			m := newMongolizer(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
-			if err := m.backupScheduled(*colls, *cronExpr, "my.db"); err != nil {
+			if err := m.backupScheduled(*colls, *cronExpr, *dbPath); err != nil {
 				log.Fatalf("backup failed : %v\n", err)
 			}
 		}
@@ -174,7 +185,18 @@ type scheduledJob struct {
 	coll collName
 }
 
+type scheduledJobResult struct {
+	Success   bool
+	Timestamp time.Time
+}
+
 func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath string) error {
+
+	err := os.MkdirAll(filepath.Dir(dbPath), 0600)
+
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	db, err := bolt.Open(dbPath, 0600, nil)
 	if err != nil {
@@ -197,6 +219,11 @@ func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath strin
 
 	c := cron.New()
 
+	metric := prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "mongolizer_status",
+		Help: "Captures whether last backup was ok or not",
+	}, []string{"database", "collection"})
+
 	var ids []scheduledJob
 
 	for _, collection := range parsed {
@@ -208,13 +235,21 @@ func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath strin
 			dir := filepath.Join(m.s3dir, dateDir)
 			err := m.backup(dir, coll.database, coll.collection)
 
-			if err == nil {
-				db.Update(func(tx *bolt.Tx) error {
-					b := tx.Bucket([]byte("Results"))
-					err := b.Put([]byte(fmt.Sprintf("%s/%s", coll.database, coll.collection)), []byte(time.Now().Format(time.RFC3339)))
-					return err
-				})
+			result := scheduledJobResult{true, time.Now()}
+
+			if err != nil {
+				metric.With(prometheus.Labels{"database": coll.database, "collection": coll.collection}).Set(0)
+				result.Success = false
+			} else {
+				metric.With(prometheus.Labels{"database": coll.database, "collection": coll.collection}).Set(1)
 			}
+
+			r, _ := json.Marshal(result)
+			db.Update(func(tx *bolt.Tx) error {
+				b := tx.Bucket([]byte("Results"))
+				err := b.Put([]byte(fmt.Sprintf("%s/%s", coll.database, coll.collection)), r)
+				return err
+			})
 
 			for _, job := range ids {
 				if job.coll.database == coll.database && job.coll.collection == coll.collection {
@@ -229,28 +264,50 @@ func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath strin
 	c.Start()
 
 	opHandler := op.NewStatus("Mongolizer", "backs up mongo on schedule").
-		ReadyAlways()
+		ReadyAlways().AddMetrics(metric)
 
 	for _, job := range ids {
+
+		db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte("Results"))
+			v := b.Get([]byte(fmt.Sprintf("%s/%s", job.coll.database, job.coll.collection)))
+
+			result := scheduledJobResult{}
+
+			json.Unmarshal(v, &result)
+
+			if !result.Success {
+				metric.With(prometheus.Labels{"database": job.coll.database, "collection": job.coll.collection}).Set(0)
+				return nil
+			} else {
+				metric.With(prometheus.Labels{"database": job.coll.database, "collection": job.coll.collection}).Set(1)
+				return nil
+			}
+
+		})
+
 		log.Printf("Next scheduled run for '%s/%s': %v\n", job.coll.database, job.coll.collection, c.Entry(job.eId).Next)
 		opHandler.AddChecker(fmt.Sprintf("%s/%s", job.coll.database, job.coll.collection), func(cr *op.CheckResponse) {
-
 			coll := job.coll
 			db.View(func(tx *bolt.Tx) error {
 				b := tx.Bucket([]byte("Results"))
 				v := b.Get([]byte(fmt.Sprintf("%s/%s", coll.database, coll.collection)))
 
-				backupTime, err := time.Parse(time.RFC3339, string(v)); if err != nil {
-					cr.Degraded("Could not find backup time", "Check backup was taken")
+				result := scheduledJobResult{}
+
+				json.Unmarshal(v, &result)
+
+				if time.Since(result.Timestamp).Hours() > 13 {
+					cr.Unhealthy("Last backup more than 13h ago", "Check backup was taken", "Stale backup data")
 					return nil
 				}
 
-				if time.Since(backupTime).Hours() > 13 {
-					cr.Unhealthy("No backup for more than 13h", "Check backup was taken", "Stale backup data")
+				if !result.Success {
+					cr.Unhealthy("Backup failed", "Check backup was taken", "Stale backup data")
 					return nil
 				}
 
-				cr.Healthy(fmt.Sprintf("Backed up %.0f hours ago", time.Since(backupTime).Hours()))
+				cr.Healthy(fmt.Sprintf("Backed up %.0f hours ago", time.Since(result.Timestamp).Hours()))
 				return nil
 			})
 		})
