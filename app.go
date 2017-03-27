@@ -110,8 +110,8 @@ func main() {
 	})
 
 	app.Command("backup", "backup a set of mongodb collections", func(cmd *cli.Cmd) {
-		colls := cmd.String(cli.StringArg{
-			Name:   "COLLECTIONS",
+		colls := cmd.String(cli.StringOpt{
+			Name:   "collections",
 			Desc:   "Collections to process (comma separated <database>/<collection>)",
 			EnvVar: "MONGODB_COLLECTIONS",
 			Value:  "foo/content,foo/bar",
@@ -124,14 +124,14 @@ func main() {
 		}
 	})
 	app.Command("restore", "restore a set of mongodb collections", func(cmd *cli.Cmd) {
-		colls := cmd.String(cli.StringArg{
-			Name:   "COLLECTIONS",
+		colls := cmd.String(cli.StringOpt{
+			Name:   "collections",
 			Desc:   "Collections to process (comma separated <database>/<collection>)",
 			EnvVar: "MONGODB_COLLECTIONS",
 			Value:  "foo/content,foo/bar",
 		})
-		dateDir := cmd.String(cli.StringArg{
-			Name: "DATE",
+		dateDir := cmd.String(cli.StringOpt{
+			Name: "date",
 			Desc: "Date to restore backup from",
 		})
 		cmd.Action = func() {
