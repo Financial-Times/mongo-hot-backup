@@ -131,8 +131,9 @@ func main() {
 			Value:  "foo/content,foo/bar",
 		})
 		dateDir := cmd.String(cli.StringOpt{
-			Name: "date",
-			Desc: "Date to restore backup from",
+			Name:  "date",
+			Desc:  "Date to restore backup from",
+			Value: dateFormat,
 		})
 		cmd.Action = func() {
 			m := newMongolizer(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
@@ -535,6 +536,10 @@ func parseCollections(colls string) ([]collName, error) {
 	return cn, nil
 }
 
+const (
+	dateFormat = "2006-01-02T15-04-05"
+)
+
 func formattedNow() string {
-	return time.Now().UTC().Format("2006-01-02T15-04-05")
+	return time.Now().UTC().Format(dateFormat)
 }
