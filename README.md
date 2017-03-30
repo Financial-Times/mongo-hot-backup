@@ -2,84 +2,148 @@
 
 This tool can back up or restore MongoDB collections while DB is running to/from AWS S3.
 
-# Usage
-## Build/install
-### Go app
+## Installation
 ```
-go get -u github.com/Financial-Times/up-mongolizer
+go get -u github.com/utilitywarehouse/mongolizer
 ```
-### Docker app
+## Running
 ```
-docker build -t coco/up-mongolizer   .
+mongolizer --help
 ```
 
-## Run
-### Backup
+## Running backups on schedule
+
+You can deploy a docker container that will run backups on schedule (default at 10:30am every day)
+
+The state of backups is kept in a boltdb file at `/var/data/mongolizer/state.db`
+
+Health endpoint is available at `0.0.0.0:8080/__/health` and will report healthy if there was a successful backup in the last 13h.
+
+Instrumentation endpoint is available at `0.0.0.0:8080/__/metrics`, a prom gauge is exposed where the value of `mongolizer_status` gauge is either 1 or 0 depending on result of the previous backup. Gauge is labbeled with `database` and collection `labels`.
+
+An initial backup will be ran if there's no backup found in the last 13h.
+
+### Usage
+
 ```
-docker run \
-        -e MONGODB=<MONGODB_ADDRESSES> \
-        -e S3_DOMAIN=<S3_DOMAIN> \
-        -e S3_BUCKET=<S3_BUCKET> \
-        -e S3_DIR=<ENVIRONMENT_TAG> \
-        -e AWS_ACCESS_KEY_ID=<AWS_ACCESS_KEY> \
-        -e AWS_SECRET_ACCESS_KEY=<AWS_SECRET_KEY> \
-        coco/up-mongolizer<:app_version> /up-mongolizer backup <db>/<coll_1>,<db>/<coll_2>,<db>/<coll_3>
+# docker run --rm mongolizer /mongolizer scheduled-backup --help
+
+Usage: mongolizer scheduled-backup [OPTIONS] COLLECTIONS
+
+backup a set of mongodb collections
+
+Arguments:
+  COLLECTIONS="foo/content,foo/bar"   Collections to process (comma separated <database>/<collection>) ($MONGODB_COLLECTIONS)
+
+Options:
+  --cron="30 10 * * *"                       Cron expression for when to run ($CRON)
+  --dbPath="/var/data/mongolizer/state.db"   Path to store boltdb file ($DBPATH)
+  --run=true                                 Run backups on startup? ($RUN)
 ```
 
-* <MONGODB_ADDRESSES> - The address to connect to MongoDB cluster
-* <S3_DOMAIN> - The domain name of S3 location where the backup should go
-* <S3_BUCKET> - The S3 bucket name
-* <ENVIRONMENT_TAG> - The S3 folder name, which should represent the environment tag
-* <AWS_ACCESS_KEY> - The AWS access key
-* <AWS_SECRET_KEY> - The AWS secret key
-* <app_version> - The Docker image version of the app. Latest if omitted
-* <db> - The DB under the collections are
-* <coll_nr> - The collection to be backed up
+### Kubernetes manifest example
 
-Example:
+Full example of rolling mongo with persistent volume + mongolizer with metrics scraping
+
 ```
-docker run \
-          -e MONGODB=$(for x in $(etcdctl ls /ft/config/mongodb);do echo -n $(etcdctl get $x/host):$(etcdctl get $x/port)"," ; done | sed s/.$//) \
-          -e S3_DOMAIN=s3-eu-west-1.amazonaws.com \
-          -e S3_BUCKET=com.ft.coco-mongo-backup.prod \
-          -e S3_DIR=$(/usr/bin/etcdctl get /ft/config/environment_tag) \
-          -e AWS_ACCESS_KEY_ID=$(/usr/bin/etcdctl get /ft/_credentials/aws/aws_access_key_id) \
-          -e AWS_SECRET_ACCESS_KEY=$(/usr/bin/etcdctl get /ft/_credentials/aws/aws_secret_access_key) \
-          coco/up-mongolizer:v0.2.0 /up-mongolizer backup upp-store/content,upp-store/lists,upp-store/notifications
+# A headless service to create DNS records
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+    prometheus.io/scrape: 'true'
+    prometheus.io/path:   /__/metrics
+    prometheus.io/port:   '8080'
+  name: mongo
+  labels:
+    app: mongo
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: mongolizer
+  - port: 27017
+    targetPort: 27017
+    name: client
+  clusterIP: None
+  selector:
+    app: mongo
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: mongo
+spec:
+  replicas: 1
+  template:
+    metadata:
+      name: mongo
+      labels:
+        app: mongo
+    spec:
+      imagePullSecrets:
+      - name: dockerhub-key
+      containers:
+      - name: mongolizer
+        image: registry.uw.systems/system/mongolizer:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: data
+          mountPath: "/var/data/mongolizer/"
+          subPath: "mongolizer"
+        env:
+        - name: MONGODB_COLLECTIONS
+          value: "db/collection,db/collection2"
+        - name: MONGODB
+          value: "mongo:27017"
+        - name: AWS_ACCESS_KEY_ID
+          value: ""
+        - name: AWS_SECRET_ACCESS_KEY
+          value: ""
+        - name: S3_BUCKET
+          value: "backup-bucket"
+        - name: S3_DIR
+          value: "/"
+      - name: mongo
+        image: mongo
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: data
+          mountPath: /data/db
+          subPath: "mongodb"
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: mongo-ebs-pvc
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: mongo-ebs-pvc
+  annotations:
+    volume.beta.kubernetes.io/storage-class: ebs-gp2
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+
 ```
 
+### Prom and alerts
 
-### Restore
+To get metrics you can use query similar to
+
 ```
- docker run \
-           -e MONGODB=<MONGODB_ADDRESSES> \
-           -e S3_DOMAIN=<S3_DOMAIN> \
-           -e S3_BUCKET=<S3_BUCKET> \
-           -e S3_DIR=<ENVIRONMENT_TAG> \
-           -e AWS_ACCESS_KEY_ID=<AWS_ACCESS_KEY> \
-           -e AWS_SECRET_ACCESS_KEY=<AWS_SECRET_KEY> \
-           coco/up-mongolizer<:app_version> /up-mongolizer restore <db>/<coll_1>,<db>/<coll_2>,<db>/<coll_3> <timestamp>
+1 - avg(mongolizer_status{kubernetes_namespace="default"}) by (app, database, collection) < bool 1
 ```
 
-* <MONGODB_ADDRESSES> - The address to connect to MongoDB cluster
-* <S3_DOMAIN> - The domain name of S3 location where the restore should go
-* <S3_BUCKET> - The S3 bucket name
-* <ENVIRONMENT_TAG> - The S3 folder name, which should represent the environment tag
-* <AWS_ACCESS_KEY> - The AWS access key
-* <AWS_SECRET_KEY> - The AWS secret key
-* <app_version> - The Docker image version of the app. Latest if omitted
-* <db> - The DB under the collections are
-* <coll_nr> - The collection to be restored
-* <timestamp> - The timestamp of the backup date
+Example alert
 
-Example:
 ```
-docker run \
-          -e MONGODB=$(for x in $(etcdctl ls /ft/config/mongodb);do echo -n $(etcdctl get $x/host):$(etcdctl get $x/port)"," ; done | sed s/.$//) \
-          -e S3_DOMAIN=s3-eu-west-1.amazonaws.com \
-          -e S3_BUCKET=com.ft.coco-mongo-backup.prod \
-          -e S3_DIR=/pre-prod-uk/ \
-          -e AWS_ACCESS_KEY_ID=$(/usr/bin/etcdctl get /ft/_credentials/aws/aws_access_key_id) \
-          -e AWS_SECRET_ACCESS_KEY=$(/usr/bin/etcdctl get /ft/_credentials/aws/aws_secret_access_key) \
-          coco/up-mongolizer:v0.2.0 /up-mongolizer restore upp-store/content,upp-store/lists,upp-store/notifications 2017-02-14T08-25-36
 ```
