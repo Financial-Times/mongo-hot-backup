@@ -110,8 +110,8 @@ func main() {
 	})
 
 	app.Command("backup", "backup a set of mongodb collections", func(cmd *cli.Cmd) {
-		colls := cmd.String(cli.StringArg{
-			Name:   "COLLECTIONS",
+		colls := cmd.String(cli.StringOpt{
+			Name:   "collections",
 			Desc:   "Collections to process (comma separated <database>/<collection>)",
 			EnvVar: "MONGODB_COLLECTIONS",
 			Value:  "foo/content,foo/bar",
@@ -124,15 +124,16 @@ func main() {
 		}
 	})
 	app.Command("restore", "restore a set of mongodb collections", func(cmd *cli.Cmd) {
-		colls := cmd.String(cli.StringArg{
-			Name:   "COLLECTIONS",
+		colls := cmd.String(cli.StringOpt{
+			Name:   "collections",
 			Desc:   "Collections to process (comma separated <database>/<collection>)",
 			EnvVar: "MONGODB_COLLECTIONS",
 			Value:  "foo/content,foo/bar",
 		})
-		dateDir := cmd.String(cli.StringArg{
-			Name: "DATE",
-			Desc: "Date to restore backup from",
+		dateDir := cmd.String(cli.StringOpt{
+			Name:  "date",
+			Desc:  "Date to restore backup from",
+			Value: dateFormat,
 		})
 		cmd.Action = func() {
 			m := newMongolizer(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
@@ -202,12 +203,12 @@ func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath strin
 	err := os.MkdirAll(filepath.Dir(dbPath), 0600)
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	db, err := bolt.Open(dbPath, 0600, nil)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer db.Close()
 
@@ -535,6 +536,10 @@ func parseCollections(colls string) ([]collName, error) {
 	return cn, nil
 }
 
+const (
+	dateFormat = "2006-01-02T15-04-05"
+)
+
 func formattedNow() string {
-	return time.Now().UTC().Format("2006-01-02T15-04-05")
+	return time.Now().UTC().Format(dateFormat)
 }
