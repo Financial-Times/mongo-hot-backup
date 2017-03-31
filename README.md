@@ -134,6 +134,19 @@ spec:
       storage: 20Gi
 
 ```
+### Restoring
+
+```
+# docker run --rm mongolizer /mongolizer restore --help
+
+Usage: mongolizer restore [OPTIONS]
+
+restore a set of mongodb collections
+
+Options:
+  --collections="foo/content,foo/bar"   Collections to process (comma separated <database>/<collection>) ($MONGODB_COLLECTIONS)
+  --date="2006-01-02T15-04-05"          Date to restore backup from
+```
 
 ### Prom and alerts
 
