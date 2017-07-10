@@ -6,11 +6,11 @@ This tool can back up or restore MongoDB collections while DB is running to/from
 ## Build/install
 ### Go app
 ```
-go get -u github.com/Financial-Times/up-mongolizer
+go get -u github.com/Financial-Times/mongodb-hot-backup
 ```
 ### Docker app
 ```
-docker build -t coco/up-mongolizer   .
+docker build -t coco/mongodb-hot-backup   .
 ```
 
 ## Run
@@ -23,7 +23,7 @@ docker run \
         -e S3_DIR=<ENVIRONMENT_TAG> \
         -e AWS_ACCESS_KEY_ID=<AWS_ACCESS_KEY> \
         -e AWS_SECRET_ACCESS_KEY=<AWS_SECRET_KEY> \
-        coco/up-mongolizer<:app_version> /up-mongolizer backup <db>/<coll_1>,<db>/<coll_2>,<db>/<coll_3>
+        coco/mongodb-hot-backup<:app_version> /mongodb-hot-backup backup <db>/<coll_1>,<db>/<coll_2>,<db>/<coll_3>
 ```
 
 * <MONGODB_ADDRESSES> - The address to connect to MongoDB cluster
@@ -45,7 +45,7 @@ docker run \
           -e S3_DIR=$(/usr/bin/etcdctl get /ft/config/environment_tag) \
           -e AWS_ACCESS_KEY_ID=$(/usr/bin/etcdctl get /ft/_credentials/aws/aws_access_key_id) \
           -e AWS_SECRET_ACCESS_KEY=$(/usr/bin/etcdctl get /ft/_credentials/aws/aws_secret_access_key) \
-          coco/up-mongolizer:v0.2.0 /up-mongolizer backup upp-store/content,upp-store/lists,upp-store/notifications
+          coco/mongodb-hot-backup:v0.2.0 /mongodb-hot-backup backup upp-store/content,upp-store/lists,upp-store/notifications
 ```
 
 
@@ -58,7 +58,7 @@ docker run \
            -e S3_DIR=<ENVIRONMENT_TAG> \
            -e AWS_ACCESS_KEY_ID=<AWS_ACCESS_KEY> \
            -e AWS_SECRET_ACCESS_KEY=<AWS_SECRET_KEY> \
-           coco/up-mongolizer<:app_version> /up-mongolizer restore <db>/<coll_1>,<db>/<coll_2>,<db>/<coll_3> <timestamp>
+           coco/mongodb-hot-backup<:app_version> /mongodb-hot-backup restore <db>/<coll_1>,<db>/<coll_2>,<db>/<coll_3> <timestamp>
 ```
 
 * <MONGODB_ADDRESSES> - The address to connect to MongoDB cluster
@@ -81,5 +81,5 @@ docker run \
           -e S3_DIR=/pre-prod-uk/ \
           -e AWS_ACCESS_KEY_ID=$(/usr/bin/etcdctl get /ft/_credentials/aws/aws_access_key_id) \
           -e AWS_SECRET_ACCESS_KEY=$(/usr/bin/etcdctl get /ft/_credentials/aws/aws_secret_access_key) \
-          coco/up-mongolizer:v0.2.0 /up-mongolizer restore upp-store/content,upp-store/lists,upp-store/notifications 2017-02-14T08-25-36
+          coco/mongodb-hot-backup:v0.2.0 /mongodb-hot-backup restore upp-store/content,upp-store/lists,upp-store/notifications 2017-02-14T08-25-36
 ```
