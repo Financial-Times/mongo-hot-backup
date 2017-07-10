@@ -20,7 +20,7 @@ import (
 const extension = ".bson.snappy"
 
 func main() {
-	app := cli.App("mongolizer", "Backup and restore mongodb collections to/from s3\nBackups are put in a directory structure /<base-dir>/<date>/database/collection")
+	app := cli.App("mongodb-hot-backup", "Backup and restore mongodb collections to/from s3\nBackups are put in a directory structure /<base-dir>/<date>/database/collection")
 
 	connStr := app.String(cli.StringOpt{
 		Name:   "mongodb",
