@@ -51,7 +51,7 @@ docker run \
 
 ### Restore
 
-Note that the restore function has no timeout. This may lead to the restore hanging indefinitely if something goes wrong, but doesn't cause the app to crash (unlikely, but possible).
+Note that the restore function no longer has a timeout. This may lead to the restore hanging indefinitely if something goes wrong, but doesn't cause the app to crash (unlikely, but possible).
 
 ```
  docker run \
