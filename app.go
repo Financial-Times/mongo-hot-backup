@@ -228,7 +228,7 @@ func dumpCollectionTo(connStr string, database, collection string, writer io.Wri
 }
 
 func restoreCollectionFrom(connStr, database, collection string, reader io.Reader) error {
-	session, err := mgo.DialWithTimeout(connStr, 5*time.Minute)
+	session, err := mgo.Dial(connStr)
 	if err != nil {
 		return err
 	}
