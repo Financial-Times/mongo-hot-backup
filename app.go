@@ -4,13 +4,13 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/jawher/mow.cli"
+	log "github.com/Sirupsen/logrus"
 	"github.com/klauspost/compress/snappy"
 	"github.com/rlmcpherson/s3gof3r"
 	"gopkg.in/mgo.v2"
@@ -245,7 +245,9 @@ func restoreCollectionFrom(connStr, database, collection string, reader io.Reade
 	bulk := session.DB(database).C(collection).Bulk()
 
 	var batchBytes int
+ 	batchStart := time.Now()
 	for {
+		
 		next, err := readNextBSON(reader)
 		if err != nil {
 			return err
@@ -258,12 +260,14 @@ func restoreCollectionFrom(connStr, database, collection string, reader io.Reade
 		// the limit, write the batch out now. 15000000 is intended to be within the
 		// expected 16MB limit
 		if batchBytes > 0 && batchBytes+len(next) > 15000000 {
+			log.Infof("Writing bulk restore batch. Took %v", time.Now().Sub(batchStart))
 			_, err = bulk.Run()
 			if err != nil {
 				return err
 			}
 			bulk = session.DB(database).C(collection).Bulk()
 			batchBytes = 0
+			batchStart = time.Now()
 		}
 
 		bulk.Insert(bson.Raw{Data: next})
