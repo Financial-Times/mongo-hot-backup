@@ -4,6 +4,14 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"github.com/boltdb/bolt"
 	"github.com/jawher/mow.cli"
 	"github.com/klauspost/compress/snappy"
@@ -13,13 +21,6 @@ import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	cron "gopkg.in/robfig/cron.v2"
-	"io"
-	"log"
-	"net/http"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
 )
 
 const extension = ".bson.snappy"
@@ -131,9 +132,10 @@ func main() {
 			Value:  "foo/content,foo/bar",
 		})
 		dateDir := cmd.String(cli.StringOpt{
-			Name:  "date",
-			Desc:  "Date to restore backup from",
-			Value: dateFormat,
+			Name:   "date",
+			Desc:   "Date to restore backup from",
+			EnvVar: "DATE",
+			Value:  dateFormat,
 		})
 		cmd.Action = func() {
 			m := newMongolizer(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
