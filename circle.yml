@@ -1,0 +1,19 @@
+machine:
+  environment:
+    SERVICE: system/mongolizer
+    UW_DOCKER_REGISTRY: registry.uw.systems
+  services:
+    - docker
+
+dependencies:
+  pre:
+    - docker login -e none@none.com -u $UW_DOCKER_USER -p $UW_DOCKER_PASS $UW_DOCKER_REGISTRY
+  
+  override:
+    - docker build --tag $UW_DOCKER_REGISTRY/$SERVICE .
+
+deployment:
+  publish:
+    branch: ['master']
+    commands:
+      - docker push $UW_DOCKER_REGISTRY/$SERVICE
