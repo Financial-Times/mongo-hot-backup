@@ -272,7 +272,7 @@ func restoreCollectionFrom(connStr, database, collection string, reader io.Reade
 			}
 
 			var duration = time.Since(batchStart)
-			log.Infof("Written bulk restore batch. Took %v", duration)
+			log.Infof("Written bulk restore batch for %s/%s. Took %v", database, collection, duration)
 
 			// rate limit between writes to prevent overloading MongoDB
 			limiter.Wait(context.Background())
