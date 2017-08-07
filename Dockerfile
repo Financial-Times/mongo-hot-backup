@@ -1,5 +1,6 @@
 FROM alpine:3.4
 ADD . /source/
+
 RUN apk add --update bash \
   && apk --update add git go ca-certificates
 
