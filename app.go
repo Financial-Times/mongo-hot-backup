@@ -4,13 +4,15 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+	"context"
+	"golang.org/x/time/rate" 
 
 	"github.com/jawher/mow.cli"
+	log "github.com/Sirupsen/logrus"
 	"github.com/klauspost/compress/snappy"
 	"github.com/rlmcpherson/s3gof3r"
 	"gopkg.in/mgo.v2"
@@ -245,7 +247,13 @@ func restoreCollectionFrom(connStr, database, collection string, reader io.Reade
 	bulk := session.DB(database).C(collection).Bulk()
 
 	var batchBytes int
+	batchStart := time.Now()
+
+	// set rate limit to 250ms
+	limiter := rate.NewLimiter(rate.Every(250 * time.Millisecond), 1)
+
 	for {
+		
 		next, err := readNextBSON(reader)
 		if err != nil {
 			return err
@@ -262,8 +270,16 @@ func restoreCollectionFrom(connStr, database, collection string, reader io.Reade
 			if err != nil {
 				return err
 			}
+
+			var duration = time.Since(batchStart)
+			log.Infof("Written bulk restore batch for %s/%s. Took %v", database, collection, duration)
+
+			// rate limit between writes to prevent overloading MongoDB
+			limiter.Wait(context.Background())
+
 			bulk = session.DB(database).C(collection).Bulk()
 			batchBytes = 0
+			batchStart = time.Now()
 		}
 
 		bulk.Insert(bson.Raw{Data: next})
@@ -271,7 +287,7 @@ func restoreCollectionFrom(connStr, database, collection string, reader io.Reade
 		batchBytes += len(next)
 	}
 	_, err = bulk.Run()
-	log.Printf("finished restore of %s/%s. Duration: %v\n", database, collection, time.Now().Sub(start))
+	log.Printf("finished restore of %s/%s. Duration: %v\n", database, collection, time.Since(start))
 	return err
 
 }
