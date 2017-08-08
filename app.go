@@ -249,8 +249,8 @@ func restoreCollectionFrom(connStr, database, collection string, reader io.Reade
 	var batchBytes int
 	batchStart := time.Now()
 
-	// set rate limit to 50ms
-	limiter := rate.NewLimiter(rate.Every(50 * time.Millisecond), 1)
+	// set rate limit to 250ms
+	limiter := rate.NewLimiter(rate.Every(250 * time.Millisecond), 1)
 
 	for {
 		
