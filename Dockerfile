@@ -10,7 +10,7 @@ RUN apk add --update bash \
   && go get ./... \
   && go install ${REPO_PATH} \
   && mv ${GOPATH}/bin/mongodb-hot-backup / \
-  && apk del go git \
+  && apk del go git libc-dev \
   && rm -rf $GOPATH /var/cache/apk/*
 
 EXPOSE 8080
