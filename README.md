@@ -3,10 +3,16 @@
 This tool can back up or restore MongoDB collections while DB is running to/from AWS S3.
 
 ## Installation
+
 ```
-go get -u github.com/utilitywarehouse/mongolizer
+go get -u github.com/Financial-Times/mongolizer
 ```
+## Building
+
+docker build -t coco/mongodb-hot-backup .
+
 ## Running
+
 ```
 mongolizer --help
 ```
@@ -154,9 +160,4 @@ To get metrics you can use query similar to
 
 ```
 1 - avg(mongolizer_status{kubernetes_namespace="default"}) by (app, database, collection) < bool 1
-```
-
-Example alert
-
-```
 ```

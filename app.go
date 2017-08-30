@@ -5,22 +5,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/boltdb/bolt"
+	"context"
 	"github.com/jawher/mow.cli"
-	"github.com/klauspost/compress/snappy"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rlmcpherson/s3gof3r"
+	"gopkg.in/robfig/cron.v2"
+	"github.com/boltdb/bolt"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/utilitywarehouse/go-operational/op"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	cron "gopkg.in/robfig/cron.v2"
+	"golang.org/x/time/rate"
+
+	log "github.com/Sirupsen/logrus"
+	"github.com/klauspost/compress/snappy"
+	"net/http"
 )
 
 const extension = ".bson.snappy"
@@ -432,7 +434,7 @@ func dumpCollectionTo(connStr string, database, collection string, writer io.Wri
 }
 
 func restoreCollectionFrom(connStr, database, collection string, reader io.Reader) error {
-	session, err := mgo.DialWithTimeout(connStr, 5*time.Minute)
+	session, err := mgo.DialWithTimeout(connStr, 0)
 	if err != nil {
 		return err
 	}
@@ -449,7 +451,13 @@ func restoreCollectionFrom(connStr, database, collection string, reader io.Reade
 	bulk := session.DB(database).C(collection).Bulk()
 
 	var batchBytes int
+	batchStart := time.Now()
+
+	// set rate limit to 250ms
+	limiter := rate.NewLimiter(rate.Every(250 * time.Millisecond), 1)
+
 	for {
+
 		next, err := readNextBSON(reader)
 		if err != nil {
 			return err
@@ -466,8 +474,16 @@ func restoreCollectionFrom(connStr, database, collection string, reader io.Reade
 			if err != nil {
 				return err
 			}
+
+			var duration = time.Since(batchStart)
+			log.Infof("Written bulk restore batch for %s/%s. Took %v", database, collection, duration)
+
+			// rate limit between writes to prevent overloading MongoDB
+			limiter.Wait(context.Background())
+
 			bulk = session.DB(database).C(collection).Bulk()
 			batchBytes = 0
+			batchStart = time.Now()
 		}
 
 		bulk.Insert(bson.Raw{Data: next})
@@ -475,7 +491,7 @@ func restoreCollectionFrom(connStr, database, collection string, reader io.Reade
 		batchBytes += len(next)
 	}
 	_, err = bulk.Run()
-	log.Printf("finished restore of %s/%s. Duration: %v\n", database, collection, time.Now().Sub(start))
+	log.Printf("finished restore of %s/%s. Duration: %v\n", database, collection, time.Since(start))
 	return err
 
 }
