@@ -1,2 +1,7 @@
+*.iml
+*.exe
 .idea
-up-mongolizer*
+mongolizer
+vendor/*/
+.project
+.vscode
