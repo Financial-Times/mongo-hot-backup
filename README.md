@@ -50,7 +50,6 @@ Options:
   --run=true                                 Run backups on startup? ($RUN)
 ```
 
-```
 ### Restoring
 
 ```
