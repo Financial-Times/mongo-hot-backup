@@ -7,9 +7,12 @@ This tool can back up or restore MongoDB collections while DB is running to/from
 ```
 go get -u github.com/Financial-Times/mongolizer
 ```
+
 ## Building
 
+```
 docker build -t coco/mongodb-hot-backup .
+```
 
 ## Running
 
@@ -47,98 +50,6 @@ Options:
   --run=true                                 Run backups on startup? ($RUN)
 ```
 
-### Kubernetes manifest example
-
-Full example of rolling mongo with persistent volume + mongolizer with metrics scraping
-
-```
-# A headless service to create DNS records
-apiVersion: v1
-kind: Service
-metadata:
-  annotations:
-    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
-    prometheus.io/scrape: 'true'
-    prometheus.io/path:   /__/metrics
-    prometheus.io/port:   '8080'
-  name: mongo
-  labels:
-    app: mongo
-spec:
-  ports:
-  - port: 8080
-    targetPort: 8080
-    name: mongolizer
-  - port: 27017
-    targetPort: 27017
-    name: client
-  clusterIP: None
-  selector:
-    app: mongo
----
-apiVersion: extensions/v1beta1
-kind: Deployment
-metadata:
-  name: mongo
-spec:
-  replicas: 1
-  template:
-    metadata:
-      name: mongo
-      labels:
-        app: mongo
-    spec:
-      imagePullSecrets:
-      - name: dockerhub-key
-      containers:
-      - name: mongolizer
-        image: registry.uw.systems/system/mongolizer:latest
-        imagePullPolicy: Always
-        ports:
-        - containerPort: 8080
-        volumeMounts:
-        - name: data
-          mountPath: "/var/data/mongolizer/"
-          subPath: "mongolizer"
-        env:
-        - name: MONGODB_COLLECTIONS
-          value: "db/collection,db/collection2"
-        - name: MONGODB
-          value: "mongo:27017"
-        - name: AWS_ACCESS_KEY_ID
-          value: ""
-        - name: AWS_SECRET_ACCESS_KEY
-          value: ""
-        - name: S3_BUCKET
-          value: "backup-bucket"
-        - name: S3_DIR
-          value: "/"
-      - name: mongo
-        image: mongo
-        ports:
-        - containerPort: 27017
-        volumeMounts:
-        - name: data
-          mountPath: /data/db
-          subPath: "mongodb"
-      volumes:
-        - name: data
-          persistentVolumeClaim:
-            claimName: mongo-ebs-pvc
----
-kind: PersistentVolumeClaim
-apiVersion: v1
-metadata:
-  name: mongo-ebs-pvc
-  annotations:
-    volume.beta.kubernetes.io/storage-class: ebs-gp2
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 20Gi
-
 ```
 ### Restoring
 
@@ -152,12 +63,4 @@ restore a set of mongodb collections
 Options:
   --collections="foo/content,foo/bar"   Collections to process (comma separated <database>/<collection>) ($MONGODB_COLLECTIONS)
   --date="2006-01-02T15-04-05"          Date to restore backup from
-```
-
-### Prom and alerts
-
-To get metrics you can use query similar to
-
-```
-1 - avg(mongolizer_status{kubernetes_namespace="default"}) by (app, database, collection) < bool 1
 ```
