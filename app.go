@@ -15,7 +15,6 @@ import (
 	"gopkg.in/robfig/cron.v2"
 	"github.com/boltdb/bolt"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/utilitywarehouse/go-operational/op"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"golang.org/x/time/rate"
@@ -236,10 +235,6 @@ func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath strin
 		Name: "mongolizer_status",
 		Help: "Captures whether last backup was ok or not",
 	}, []string{"database", "collection"})
-
-	opHandler := op.NewStatus("Mongolizer", "backs up mongo on schedule").
-		ReadyAlways().
-		AddMetrics(metric)
 
 	var ids []scheduledJob
 
