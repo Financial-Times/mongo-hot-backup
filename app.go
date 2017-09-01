@@ -24,6 +24,7 @@ import (
 	"net/http"
 	health "github.com/Financial-Times/go-fthealth/v1_1"
 	"github.com/gorilla/mux"
+	"strconv"
 )
 
 const extension = ".bson.snappy"
@@ -323,6 +324,8 @@ func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath strin
 	r := mux.NewRouter()
 	r.HandleFunc("/__health", http.HandlerFunc(health.Handler(hc)))
 	http.Handle("/", r)
+
+	log.Fatal(http.ListenAndServe(":8080", nil))
 
 	return nil
 }
