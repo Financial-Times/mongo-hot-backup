@@ -24,7 +24,6 @@ import (
 	"net/http"
 	health "github.com/Financial-Times/go-fthealth/v1_1"
 	"github.com/gorilla/mux"
-	"strconv"
 )
 
 const extension = ".bson.snappy"
