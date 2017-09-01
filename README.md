@@ -1,4 +1,4 @@
-# MongoDB Hot Backup
+# Mongolizer
 
 This tool can back up or restore MongoDB collections while DB is running to/from AWS S3.
 
