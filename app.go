@@ -23,6 +23,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/klauspost/compress/snappy"
 	"net/http"
+	health "github.com/Financial-Times/go-fthealth/v1_1"
 )
 
 const extension = ".bson.snappy"
@@ -291,31 +292,6 @@ func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath strin
 			return nil
 		})
 
-		//each time health endpoint is called we will pull the latest backup state from DB and report based on that
-		opHandler.AddChecker(fmt.Sprintf("%s/%s", coll.database, coll.collection), func(cr *op.CheckResponse) {
-			db.View(func(tx *bolt.Tx) error {
-				b := tx.Bucket([]byte("Results"))
-				v := b.Get([]byte(fmt.Sprintf("%s/%s", coll.database, coll.collection)))
-
-				result := scheduledJobResult{}
-
-				json.Unmarshal(v, &result)
-
-				if time.Since(result.Timestamp).Hours() > 13 {
-					cr.Unhealthy("Last backup more than 13h ago", "Check backup was taken", "Stale backup data")
-					return nil
-				}
-
-				if !result.Success {
-					cr.Unhealthy("Backup failed", "Check backup was taken", "Stale backup data")
-					return nil
-				}
-
-				cr.Healthy(fmt.Sprintf("Backed up %.0f hours ago", time.Since(result.Timestamp).Hours()))
-				return nil
-			})
-		})
-
 		eId, _ := c.AddFunc(cronExpr, func() { //now we add the cron methods
 
 			cronFunc()
@@ -338,7 +314,18 @@ func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath strin
 		log.Printf("Next scheduled run for '%s/%s': %v\n", job.coll.database, job.coll.collection, c.Entry(job.eId).Next)
 	}
 
-	http.Handle("/__/", op.NewHandler(opHandler))
+	healthService := newHealthService(db, parsed, healthConfig{
+		appSystemCode: "up-mgz",
+		appName: "mongolizer",
+	})
+	hc := health.HealthCheck{
+		SystemCode:  healthService.config.appSystemCode,
+		Name:        healthService.config.appName,
+		Description: "Creates periodic backups of mongodb.",
+		Checks:      healthService.checks,
+	}
+	mux := http.NewServeMux()
+	mux.Handle("/__health", http.HandlerFunc(health.Handler(hc)))
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
 
