@@ -34,11 +34,11 @@ func newHealthService(db *bolt.DB, collections []collName, config healthConfig) 
 
 func (h *healthService) backupImageCheck(database string, collection string) health.Check {
 	return health.Check{
-		BusinessImpact:   "Restoring the database in case of an issue will have to be done from older backups.",
-		Name:             "BackupIsStale",
+		BusinessImpact:   "Restoring the database in case of an issue will have to be done from older backups. It will take longer to restore systems to a clean state.",
+		Name:             collection,
 		PanicGuide:       "https://dewey.ft.com/mongolizer.html",
 		Severity:         1,
-		TechnicalSummary: "A backup for database %s, collection %shasn't been made in the last 26 hours.",
+		TechnicalSummary: fmt.Sprintf("A backup for database %s, collection %s has not been made in the last 26 hours.", database, collection),
 		Checker:          func() (string, error) { return h.verifyExistingBackupImage(database, collection) },
 	}
 }
