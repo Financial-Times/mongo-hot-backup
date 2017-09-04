@@ -54,7 +54,7 @@ export AWS_SECRET_ACCESS_KEY=456
 docker run --rm --env "MONGODB==$MONGODB" --env "S3_DOMAIN=$S3_DOMAIN" --env "S3_BUCKET=$S3_BUCKET" --env "S3_DIR=$S3_DIR" --env "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" --env "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" coco/mongolizer:2.0.0-productionize-rc7 backup --collections="upp-store/lists,upp-store/list-notifications"
 ```
 
-You can also try `docker run --rm mongolizer backup --help`
+You can also try `docker run --rm coco/mongolizer backup --help`
 
 ### Restoring
 
@@ -68,9 +68,8 @@ export AWS_SECRET_ACCESS_KEY=456
 docker run --rm --env "MONGODB==$MONGODB" --env "S3_DOMAIN=$S3_DOMAIN" --env "S3_BUCKET=$S3_BUCKET" --env "S3_DIR=$S3_DIR" --env "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" --env "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" coco/mongolizer:2.0.0-productionize-rc7 restore --collections="upp-store/lists,upp-store/list-notifications" --date="2017-09-04T12-40-36"
 ```
 
-You can also try `docker run --rm mongolizer restore --help`
+You can also try `docker run --rm coco/mongolizer restore --help`
 
-##Links
+## Links
 
 * [mongodb backup/restore documentation on FT Technology's Google Sites](https://sites.google.com/a/ft.com/technology/systems/dynamic-semantic-publishing/extra-publishing/mongo-db-run-book/mongo-db-backup-restore)
-* [mongodb backup/restore documentation Google Doc](https://docs.google.com/document/d/1f3-1JHWrXy2mQrBfqs4jRuPNhO5jThKdnh8J7uyoJBU/edit#)
