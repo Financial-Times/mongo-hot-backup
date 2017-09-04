@@ -30,6 +30,7 @@ example:
 
 ```
 export MONGODB=ip-172-24-11-64.eu-west-1.compute.internal:27018,ip-172-24-186-252.eu-west-1.compute.internal:27020,ip-172-24-74-51.eu-west-1.compute.internal:27019
+export S3_BUCKET=com.ft.coco-mongo-backup.prod;
 export S3_DOMAIN=s3-eu-west-1.amazonaws.com
 export S3_DIR=pre-prod-uk
 export AWS_ACCESS_KEY_ID=123
@@ -46,6 +47,7 @@ The help `docker run --rm coco/mongolizer scheduled-backup --help` could supply 
 
 ```
 export MONGODB=ip-172-24-11-64.eu-west-1.compute.internal:27018,ip-172-24-186-252.eu-west-1.compute.internal:27020,ip-172-24-74-51.eu-west-1.compute.internal:27019
+export S3_BUCKET=com.ft.coco-mongo-backup.prod;
 export S3_DOMAIN=s3-eu-west-1.amazonaws.com
 export S3_DIR=pre-prod-uk
 export AWS_ACCESS_KEY_ID=123
@@ -60,6 +62,7 @@ You can also try `docker run --rm coco/mongolizer backup --help`
 
 ```
 export MONGODB=ip-172-24-11-64.eu-west-1.compute.internal:27018,ip-172-24-186-252.eu-west-1.compute.internal:27020,ip-172-24-74-51.eu-west-1.compute.internal:27019
+export S3_BUCKET=com.ft.coco-mongo-backup.prod;
 export S3_DOMAIN=s3-eu-west-1.amazonaws.com
 export S3_DIR=pre-prod-uk
 export AWS_ACCESS_KEY_ID=123
