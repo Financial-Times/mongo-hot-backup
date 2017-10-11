@@ -254,6 +254,7 @@ func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath strin
 			if err != nil {
 				metric.With(prometheus.Labels{"database": coll.database, "collection": coll.collection}).Set(0)
 				result.Success = false
+				log.Printf("Error backing up collection '%s/%s': %v\n", coll.database, coll.collection, err)
 			} else {
 				metric.With(prometheus.Labels{"database": coll.database, "collection": coll.collection}).Set(1)
 			}
