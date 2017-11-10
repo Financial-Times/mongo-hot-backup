@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"encoding/json"
 	"time"
-	"github.com/pkg/errors"
+	"errors"
 )
 
 type healthService struct {
