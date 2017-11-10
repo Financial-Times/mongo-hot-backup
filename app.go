@@ -251,6 +251,7 @@ func (m *mongobackup) backupScheduled(colls string, cronExpr string, dbPath stri
 			result := scheduledJobResult{true, time.Now()}
 
 			if err != nil {
+				log.Errorf("Error backing up %s/%s: %v\n", coll.database, coll.collection)
 				metric.With(prometheus.Labels{"database": coll.database, "collection": coll.collection}).Set(0)
 				result.Success = false
 			} else {
