@@ -47,7 +47,9 @@ jobs:
       - setup_docker_engine
       - run:
           name: Build Dockerfile
-          command: docker build \
+          command: |
+            source ${BASH_ENV}
+            docker build \
             --tag nexus.in.ft.com:5000/coco/${CIRCLE_PROJECT_REPONAME}:${DOCKER_TAG} .
       - deploy:
           name: Push Docker image
