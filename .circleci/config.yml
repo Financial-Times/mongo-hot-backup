@@ -39,7 +39,7 @@ jobs:
       - store_test_results:
           path: /tmp/test-results
   dockerfile:
-    working_directory: /{{ cookiecutter.repo_name }}
+    working_directory: /mongo-hot-backup
     docker:
       - image: docker:1.12.6-git
     steps:
