@@ -1,6 +1,6 @@
 DOCKER_REGISTRY=registry.uw.systems
 DOCKER_REGISTRY_NS=system
-DOCKER_IMAGE=mongolizer
+DOCKER_IMAGE=mongo-hot-backup
 DOCKER_TAG=$(DOCKER_REGISTRY)/$(DOCKER_REGISTRY_NS)/$(DOCKER_IMAGE)
 
 docker-image:

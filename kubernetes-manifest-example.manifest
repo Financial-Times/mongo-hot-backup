@@ -14,7 +14,7 @@ spec:
   ports:
   - port: 8080
     targetPort: 8080
-    name: mongolizer
+    name: mongo-hot-backup
   - port: 27017
     targetPort: 27017
     name: client
@@ -37,15 +37,15 @@ spec:
       imagePullSecrets:
       - name: dockerhub-key
       containers:
-      - name: mongolizer
-        image: registry.uw.systems/system/mongolizer:latest
+      - name: mongo-hot-backup
+        image: registry.uw.systems/system/mongo-hot-backup:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
         volumeMounts:
         - name: data
-          mountPath: "/var/data/mongolizer/"
-          subPath: "mongolizer"
+          mountPath: "/var/data/mongo-hot-backup/"
+          subPath: "mongo-hot-backup"
         env:
         - name: MONGODB_COLLECTIONS
           value: "db/collection,db/collection2"

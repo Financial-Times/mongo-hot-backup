@@ -32,7 +32,7 @@ func main() {
 
 	s3gof3r.DefaultConfig.Md5Check = false
 
-	app := cli.App("mongolizer", "Backup and restore mongodb collections to/from s3\nBackups are put in a directory structure /<base-dir>/<date>/database/collection")
+	app := cli.App("mongobackup", "Backup and restore mongodb collections to/from s3\nBackups are put in a directory structure /<base-dir>/<date>/database/collection")
 
 	connStr := app.String(cli.StringOpt{
 		Name:   "mongodb",
@@ -95,7 +95,7 @@ func main() {
 			Name:   "dbPath",
 			Desc:   "Path to store boltdb file",
 			EnvVar: "DBPATH",
-			Value:  "/var/data/mongolizer/state.db",
+			Value:  "/var/data/mongobackup/state.db",
 		})
 
 		run := cmd.Bool(cli.BoolOpt{
@@ -106,7 +106,7 @@ func main() {
 		})
 
 		cmd.Action = func() {
-			m := newMongolizer(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
+			m := newMongoBackup(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
 			if err := m.backupScheduled(*colls, *cronExpr, *dbPath, *run); err != nil {
 				log.Fatalf("backup failed : %v\n", err)
 			}
@@ -121,7 +121,7 @@ func main() {
 			Value:  "foo/content,foo/bar",
 		})
 		cmd.Action = func() {
-			m := newMongolizer(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
+			m := newMongoBackup(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
 			if err := m.backupAll(*colls); err != nil {
 				log.Fatalf("backup failed : %v\n", err)
 			}
@@ -141,7 +141,7 @@ func main() {
 			Value:  dateFormat,
 		})
 		cmd.Action = func() {
-			m := newMongolizer(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
+			m := newMongoBackup(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
 			if err := m.restoreAll(*dateDir, *colls); err != nil {
 				log.Fatalf("restore failed : %v\n", err)
 			}
@@ -154,15 +154,15 @@ func main() {
 	}
 }
 
-type mongolizer struct {
+type mongobackup struct {
 	connectionString string
 	s3bucket         string
 	s3dir            string
 	s3               *s3gof3r.S3
 }
 
-func newMongolizer(connectionString, s3bucket, s3dir, s3domain, accessKey, secretKey string) *mongolizer {
-	return &mongolizer{
+func newMongoBackup(connectionString, s3bucket, s3dir, s3domain, accessKey, secretKey string) *mongobackup {
+	return &mongobackup{
 		connectionString,
 		s3bucket,
 		s3dir,
@@ -176,7 +176,7 @@ func newMongolizer(connectionString, s3bucket, s3dir, s3domain, accessKey, secre
 	}
 }
 
-func (m *mongolizer) backupAll(colls string) error {
+func (m *mongobackup) backupAll(colls string) error {
 	parsed, err := parseCollections(colls)
 	if err != nil {
 		return err
@@ -203,7 +203,7 @@ type scheduledJobResult struct {
 	Timestamp time.Time
 }
 
-func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath string, run bool) error {
+func (m *mongobackup) backupScheduled(colls string, cronExpr string, dbPath string, run bool) error {
 
 	err := os.MkdirAll(filepath.Dir(dbPath), 0600)
 
@@ -233,7 +233,7 @@ func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath strin
 	c := cron.New()
 
 	metric := prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "mongolizer_status",
+		Name: "mongo-hot-backup-status",
 		Help: "Captures whether last backup was ok or not",
 	}, []string{"database", "collection"})
 
@@ -312,7 +312,7 @@ func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath strin
 
 	healthService := newHealthService(db, parsed, healthConfig{
 		appSystemCode: "up-mgz",
-		appName: "mongolizer",
+		appName: "mongobackup",
 	})
 	hc := health.HealthCheck{
 		SystemCode:  healthService.config.appSystemCode,
@@ -329,7 +329,7 @@ func (m *mongolizer) backupScheduled(colls string, cronExpr string, dbPath strin
 	return nil
 }
 
-func (m *mongolizer) backup(dir, database, collection string) error {
+func (m *mongobackup) backup(dir, database, collection string) error {
 
 	start := time.Now()
 	log.Printf("backing up %s/%s to %s in %s\n", database, collection, dir, m.s3bucket)
@@ -358,7 +358,7 @@ func (m *mongolizer) backup(dir, database, collection string) error {
 	return err
 }
 
-func (m *mongolizer) restoreAll(dateDir string, colls string) error {
+func (m *mongobackup) restoreAll(dateDir string, colls string) error {
 	parsed, err := parseCollections(colls)
 	if err != nil {
 		return err
@@ -373,7 +373,7 @@ func (m *mongolizer) restoreAll(dateDir string, colls string) error {
 	return nil
 }
 
-func (m *mongolizer) restore(dir, database, collection string) error {
+func (m *mongobackup) restore(dir, database, collection string) error {
 
 	path := filepath.Join(dir, database, collection+extension)
 

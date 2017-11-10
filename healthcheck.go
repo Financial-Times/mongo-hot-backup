@@ -36,7 +36,7 @@ func (h *healthService) backupImageCheck(database string, collection string) hea
 	return health.Check{
 		BusinessImpact:   "Restoring the database in case of an issue will have to be done from older backups. It will take longer to restore systems to a clean state.",
 		Name:             collection,
-		PanicGuide:       "https://dewey.ft.com/mongolizer.html",
+		PanicGuide:       "https://dewey.ft.com/mongo-hot-backup.html",
 		Severity:         1,
 		TechnicalSummary: fmt.Sprintf("A backup for database %s, collection %s has not been made in the last 26 hours.", database, collection),
 		Checker:          func() (string, error) { return h.verifyExistingBackupImage(database, collection) },

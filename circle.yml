@@ -1,6 +1,6 @@
 machine:
   environment:
-    SERVICE: system/mongolizer
+    SERVICE: system/mongo-hot-backup
     UW_DOCKER_REGISTRY: registry.uw.systems
   services:
     - docker
