@@ -47,7 +47,14 @@ jobs:
       - setup_docker_engine
       - run:
           name: Build Dockerfile
-          command: docker build .
+          command: docker build \
+            --tag nexus.in.ft.com:5000/coco/${CIRCLE_PROJECT_REPONAME}:${DOCKER_TAG} .
+      - deploy:
+          name: Push Docker image
+          command: |
+            source ${BASH_ENV}
+            docker login nexus.in.ft.com:5000 -u ${DOCKER_USER} -p ${DOCKER_PASSWORD}
+            docker push nexus.in.ft.com:5000/coco/${CIRCLE_PROJECT_REPONAME}:${DOCKER_TAG}
 workflows:
   version: 2
   test-and-build-docker:
@@ -56,3 +63,4 @@ workflows:
       - dockerfile:
           requires:
             - build
+            - deploy
