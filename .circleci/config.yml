@@ -1,0 +1,58 @@
+version: 2
+jobs:
+  build:
+    working_directory: /go/src/github.com/Financial-Times/mongo-hot-backup
+    docker:
+      - image: golang:1.8.3
+        environment:
+          GOPATH: /go
+          CIRCLE_TEST_REPORTS: /tmp/test-results
+          CIRCLE_COVERAGE_REPORT: /tmp/coverage-results
+    steps:
+      - checkout
+      - run:
+          name: External Dependencies
+          command: |
+            go get -u github.com/mattn/goveralls
+            go get -u github.com/jstemmer/go-junit-report
+            go get -u github.com/kardianos/govendor
+            go get -u github.com/haya14busa/goverage
+      - run:
+          name: Test Results
+          command: |
+            mkdir -p ${CIRCLE_TEST_REPORTS}
+            mkdir -p ${CIRCLE_COVERAGE_REPORT}
+      - run:
+          name: Govendor Sync
+          command: govendor sync -v
+      - run:
+          name: Go Build
+          command: go build -v
+      - run:
+          name: Run Tests
+          command: |
+            govendor test -race -v +local | /go/bin/go-junit-report > ${CIRCLE_TEST_REPORTS}/main.xml
+            goverage -covermode=atomic -race -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out ./...
+      - run:
+          name: Upload Coverage
+          command: /go/bin/goveralls -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out -service=circle-ci -repotoken=$COVERALLS_TOKEN
+      - store_test_results:
+          path: /tmp/test-results
+  dockerfile:
+    working_directory: /{{ cookiecutter.repo_name }}
+    docker:
+      - image: docker:1.12.6-git
+    steps:
+      - checkout
+      - setup_docker_engine
+      - run:
+          name: Build Dockerfile
+          command: docker build .
+workflows:
+  version: 2
+  test-and-build-docker:
+    jobs:
+      - build
+      - dockerfile:
+          requires:
+            - build

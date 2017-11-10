@@ -1,5 +1,7 @@
 # mongo-hot-backup
 
+[![Circle CI](https://circleci.com/gh/Financial-Times/mongo-hot-backup/tree/master.png?style=shield)](https://circleci.com/gh/Financial-Times/mongo-hot-backup/tree/master)[![Go Report Card](https://goreportcard.com/badge/github.com/Financial-Times/mongo-hot-backup)](https://goreportcard.com/report/github.com/Financial-Times/mongo-hot-backup) [![Coverage Status](https://coveralls.io/repos/github/Financial-Times/mongo-hot-backup/badge.svg)](https://coveralls.io/github/Financial-Times/mongo-hot-backup)
+
 This tool can back up or restore MongoDB collections while DB is running to/from AWS S3.
 
 You can deploy a docker container that will run backups on schedule (default at 10:30am every day). Or you can just run the container to make a single backup, or restore from a given point of time.
