@@ -72,6 +72,13 @@ func main() {
 		HideValue: true,
 	})
 
+	mongoTimeout := app.Int(cli.IntOpt{
+		Name:   "mongoTimeout",
+		Desc:   "Mongo session connection timeout in seconds",
+		EnvVar: "MONGO_TIMEOUT",
+		Value:  60,
+	})
+
 	app.Command("scheduled-backup", "backup a set of mongodb collections", func(cmd *cli.Cmd) {
 		colls := cmd.String(cli.StringOpt{
 			Name:   "collections",
@@ -103,7 +110,7 @@ func main() {
 		})
 
 		cmd.Action = func() {
-			m := newMongolizer(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
+			m := newMongolizer(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey, *mongoTimeout)
 			if err := m.backupScheduled(*colls, *cronExpr, *dbPath, *run); err != nil {
 				log.Fatalf("backup failed : %v\n", err)
 			}
@@ -118,7 +125,7 @@ func main() {
 			Value:  "foo/content,foo/bar",
 		})
 		cmd.Action = func() {
-			m := newMongolizer(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
+			m := newMongolizer(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey, *mongoTimeout)
 			if err := m.backupAll(*colls); err != nil {
 				log.Fatalf("backup failed : %v\n", err)
 			}
@@ -138,7 +145,7 @@ func main() {
 			Value:  dateFormat,
 		})
 		cmd.Action = func() {
-			m := newMongolizer(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
+			m := newMongolizer(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey, *mongoTimeout)
 			if err := m.restoreAll(*dateDir, *colls); err != nil {
 				log.Fatalf("restore failed : %v\n", err)
 			}
@@ -156,9 +163,10 @@ type mongolizer struct {
 	s3bucket         string
 	s3dir            string
 	s3               *s3gof3r.S3
+	mongoTimeout     int
 }
 
-func newMongolizer(connectionString, s3bucket, s3dir, s3domain, accessKey, secretKey string) *mongolizer {
+func newMongolizer(connectionString, s3bucket, s3dir, s3domain, accessKey, secretKey string, mongoTimeout int) *mongolizer {
 	return &mongolizer{
 		connectionString,
 		s3bucket,
@@ -170,6 +178,7 @@ func newMongolizer(connectionString, s3bucket, s3dir, s3domain, accessKey, secre
 				SecretKey: secretKey,
 			},
 		),
+		mongoTimeout,
 	}
 }
 
@@ -360,7 +369,7 @@ func (m *mongolizer) backup(dir, database, collection string) error {
 
 	sw := snappy.NewBufferedWriter(w)
 
-	if err := dumpCollectionTo(m.connectionString, database, collection, sw); err != nil {
+	if err := dumpCollectionTo(m.connectionString, database, collection, sw, m.mongoTimeout); err != nil {
 		return err
 	}
 
@@ -406,11 +415,13 @@ func (m *mongolizer) restore(dir, database, collection string) error {
 	return nil
 }
 
-func dumpCollectionTo(connStr string, database, collection string, writer io.Writer) error {
-	session, err := mgo.Dial(connStr)
+func dumpCollectionTo(connStr, database, collection string, writer io.Writer, mongoTimeout int) error {
+	session, err := mgo.DialWithTimeout(connStr, time.Duration(mongoTimeout)*time.Second)
 	if err != nil {
 		return err
 	}
+	session.SetSyncTimeout(time.Duration(mongoTimeout) * time.Minute)
+	session.SetSocketTimeout(time.Duration(mongoTimeout) * time.Minute)
 	session.SetPrefetch(1.0)
 	defer session.Close()
 
