@@ -11,15 +11,6 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Set Docker image tag based on branch or git tag
-          command: |
-            if [ ! -z "${CIRCLE_TAG}" ] ; then
-              echo 'export DOCKER_TAG=${CIRCLE_TAG}' >> $BASH_ENV
-            elif [ "${CIRCLE_BRANCH}" == "master" ] ; then
-              echo 'export DOCKER_TAG=latest' >> $BASH_ENV
-            else
-              echo 'export DOCKER_TAG=$( echo ${CIRCLE_BRANCH} | cut -f 2 -d / )' >> $BASH_ENV
-            fi
           name: External Dependencies
           command: |
             go get -u github.com/mattn/goveralls
@@ -55,6 +46,15 @@ jobs:
       - checkout
       - setup_docker_engine
       - run:
+          name: Set Docker image tag based on branch or git tag
+          command: |
+            if [ ! -z "${CIRCLE_TAG}" ] ; then
+              echo 'export DOCKER_TAG=${CIRCLE_TAG}' >> $BASH_ENV
+            elif [ "${CIRCLE_BRANCH}" == "master" ] ; then
+              echo 'export DOCKER_TAG=latest' >> $BASH_ENV
+            else
+              echo 'export DOCKER_TAG=$( echo ${CIRCLE_BRANCH} | cut -f 2 -d / )' >> $BASH_ENV
+            fi
           name: Build Dockerfile
           command: |
             source ${BASH_ENV}
