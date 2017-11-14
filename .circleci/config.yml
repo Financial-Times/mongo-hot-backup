@@ -49,21 +49,19 @@ jobs:
           name: Set Docker image tag based on branch or git tag
           command: |
             if [ ! -z "${CIRCLE_TAG}" ] ; then
-              echo 'export DOCKER_TAG=${CIRCLE_TAG}' >> $BASH_ENV
+              echo 'export DOCKER_TAG=${CIRCLE_TAG}'
             elif [ "${CIRCLE_BRANCH}" == "master" ] ; then
-              echo 'export DOCKER_TAG=latest' >> $BASH_ENV
+              echo 'export DOCKER_TAG=latest'
             else
-              echo 'export DOCKER_TAG=$( echo ${CIRCLE_BRANCH} | cut -f 2 -d / )' >> $BASH_ENV
+              echo 'export DOCKER_TAG=$( echo ${CIRCLE_BRANCH} | cut -f 2 -d / )'
             fi
           name: Build Dockerfile
           command: |
-            source ${BASH_ENV}
             docker build \
             --tag nexus.in.ft.com:5000/coco/${CIRCLE_PROJECT_REPONAME}:${DOCKER_TAG} .
       - deploy:
           name: Push Docker image
           command: |
-            source ${BASH_ENV}
             docker login nexus.in.ft.com:5000 -u ${DOCKER_USER} -p ${DOCKER_PASSWORD}
             docker push nexus.in.ft.com:5000/coco/${CIRCLE_PROJECT_REPONAME}:${DOCKER_TAG}
 workflows:
