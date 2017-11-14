@@ -41,10 +41,10 @@ jobs:
   dockerfile:
     working_directory: /mongo-hot-backup
     docker:
-      - image: docker:1.12.6-git
+      - image: docker:stable-git
     steps:
       - checkout
-      - setup_docker_engine
+      - setup_remote_docker
       - run:
           name: Set Docker image tag based on branch or git tag
           command: |
