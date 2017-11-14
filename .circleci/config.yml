@@ -44,7 +44,7 @@ jobs:
       - image: docker:1.12.6-git
     steps:
       - checkout
-      - setup_docker_engine
+      - setup_remote_docker
       - run:
           name: Set Docker image tag based on branch or git tag
           command: |
@@ -55,6 +55,7 @@ jobs:
             else
               echo 'export DOCKER_TAG=$( echo ${CIRCLE_BRANCH} | cut -f 2 -d / )' >> $BASH_ENV
             fi
+      - run:
           name: Build Dockerfile
           command: |
             source ${BASH_ENV}
