@@ -55,7 +55,6 @@ jobs:
             else
               echo 'export DOCKER_TAG=$( echo ${CIRCLE_BRANCH} | cut -f 2 -d / )'
             fi
-            echo 'DOCKER_TAG:$DOCKER_TAG'
           name: Build Dockerfile
           command: |
             docker build \
