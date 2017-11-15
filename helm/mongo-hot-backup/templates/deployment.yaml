@@ -61,7 +61,7 @@ spec:
         ports:
         - containerPort: 8080
         volumeMounts:
-        - name: mongo-persistent-{{ . }}
+        - name: mongo-persistent-0
           mountPath: /data/mongo-hot-backup
         livenessProbe:
           tcpSocket:
@@ -75,3 +75,7 @@ spec:
           periodSeconds: 30
         resources:
 {{ toYaml .Values.resources | indent 12 }}
+      volumes:
+      - name: mongo-persistent-0
+        persistentVolumeClaim:
+          claimName: "{{ .Values.service.name }}-pvc-0"
