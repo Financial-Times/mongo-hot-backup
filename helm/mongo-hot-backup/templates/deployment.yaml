@@ -38,6 +38,7 @@ spec:
         - name: S3_BUCKET
           value: com.ft.coco-mongo-backup.prod
         - name: S3_DIR
+          valueFrom:
             configMapKeyRef:
               name: global-config
               key: environment
