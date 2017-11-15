@@ -1,0 +1,14 @@
+# Default values for notifications-rw.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+service:
+  name: "" # The name of the service, should be defined in the specific app-configs folder.
+  hasHealthcheck: "true"
+replicaCount: 2
+image:
+  repository: nexus.in.ft.com:5000/coco/notifications-rw
+  pullPolicy: IfNotPresent
+resources:
+  limits:
+    memory: 384Mi
+

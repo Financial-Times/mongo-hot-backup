@@ -1,0 +1,76 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: {{ .Values.service.name }}
+  labels:
+    chart: "{{ .Chart.Name | trunc 63 }}"
+    chartVersion: "{{ .Chart.Version | trunc 63 }}"
+    visualize: "true"
+    app: {{ .Values.service.name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.service.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.service.name }}
+        visualize: "true"
+    spec:
+      imagePullSecrets:
+        - name: nexusregistry
+      containers:
+      - name: {{ .Values.service.name }}
+        image: "{{ .Values.image.repository }}:{{ .Chart.Version }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        resources:
+          limits:
+            memory: 256Mi
+        env:
+        - name: MONGODB
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: mongo.addresses
+        - name: S3_DOMAIN
+          value: s3-eu-west-1.amazonaws.com
+        - name: S3_BUCKET
+          value: com.ft.coco-mongo-backup.prod
+        - name: S3_DIR
+            configMapKeyRef:
+              name: global-config
+              key: environment
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            configMapKeyRef:
+              name: global-secrets
+              key: aws.access_key_id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: global-secrets
+              key: aws.secret_access_key
+        - name: MONGODB_COLLECTIONS
+          value: {{ .Values.env.MONGODB_COLLECTIONS }}
+        - name: CRON
+          value: 0 15 * * *
+        - name: DBPATH
+          value: /
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: mongo-persistent-{{ . }}
+          mountPath: /data/mongo-hot-backup
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 10
+        readinessProbe:
+          httpGet:
+            path: "/__gtg"
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 30
+        resources:
+{{ toYaml .Values.resources | indent 12 }}

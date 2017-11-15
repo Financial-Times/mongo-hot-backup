@@ -1,7 +1,7 @@
 *.iml
 *.exe
 .idea
-mongo-hot-backup
+/mongo-hot-backup
 vendor/*/
 .project
 .vscode
