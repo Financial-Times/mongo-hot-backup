@@ -1,4 +1,4 @@
 apiVersion: v1
 description: mongo-hot-backup Helm chart for Kubernetes
 name: mongo-hot-backup
-version: 0.0.0  # this entry can be left untouched as it is automatically handled by Jenkins pipeline
+version: lets-productionize  # this entry can be left untouched as it is automatically handled by Jenkins pipeline

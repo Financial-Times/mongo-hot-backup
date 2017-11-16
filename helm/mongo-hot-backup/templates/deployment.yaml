@@ -18,6 +18,21 @@ spec:
         app: {{ .Values.service.name }}
         visualize: "true"
     spec:
+      tolerations:
+      # Making sure that Mongo will be scheduled on dedicated nodes. These nodes are tainted and labeled by the provisioner.
+      - key: "dedicated"
+        operator: "Equal"
+        value: "mongo"
+        effect: "NoSchedule"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kube-aws.coreos.com/role
+                operator: In
+                values:
+                - mongo-worker
       imagePullSecrets:
         - name: nexusregistry
       containers:
@@ -44,12 +59,12 @@ spec:
               key: environment
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
-            configMapKeyRef:
+            secretKeyRef:
               name: global-secrets
               key: aws.access_key_id
         - name: AWS_SECRET_ACCESS_KEY
           valueFrom:
-            configMapKeyRef:
+            secretKeyRef:
               name: global-secrets
               key: aws.secret_access_key
         - name: MONGODB_COLLECTIONS
@@ -57,12 +72,13 @@ spec:
         - name: CRON
           value: 0 15 * * *
         - name: DBPATH
-          value: /
+          value: /{{ .Values.service.volumeMountPath }}/state.db
         ports:
         - containerPort: 8080
         volumeMounts:
         - name: mongo-persistent-0
-          mountPath: /data/mongo-hot-backup
+          mountPath: /{{ .Values.service.volumeMountPath }}
+          subPath: {{ .Values.service.volumeMountPath }}
         livenessProbe:
           tcpSocket:
             port: 8080
@@ -78,4 +94,4 @@ spec:
       volumes:
       - name: mongo-persistent-0
         persistentVolumeClaim:
-          claimName: "{{ .Values.service.name }}-pvc-0"
+          claimName: "mongodb-pvc-0"
