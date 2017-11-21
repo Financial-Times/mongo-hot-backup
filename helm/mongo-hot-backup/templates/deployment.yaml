@@ -73,6 +73,8 @@ spec:
           value: 0 15 * * *
         - name: DBPATH
           value: /{{ .Values.service.volumeMountPath }}/state.db
+        - name: RUN
+          value: true
         ports:
         - containerPort: 8080
         volumeMounts:
