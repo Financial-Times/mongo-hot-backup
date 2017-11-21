@@ -17,24 +17,12 @@
 			"versionExact": "v1.0.3"
 		},
 		{
-			"checksumSHA1": "spyv5/YFBjYyZLZa1U2LBfDR8PM=",
-			"path": "github.com/beorn7/perks/quantile",
-			"revision": "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9",
-			"revisionTime": "2016-08-04T10:47:26Z"
-		},
-		{
 			"checksumSHA1": "R1Q34Pfnt197F/nCOO9kG8c+Z90=",
 			"path": "github.com/boltdb/bolt",
 			"revision": "2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8",
 			"revisionTime": "2017-07-17T17:11:48Z",
 			"version": "v1.3.1",
 			"versionExact": "v1.3.1"
-		},
-		{
-			"checksumSHA1": "yqF125xVSkmfLpIVGrLlfE05IUk=",
-			"path": "github.com/golang/protobuf/proto",
-			"revision": "ab9f9a6dab164b7d1246e0e688b0ab7b94d8553e",
-			"revisionTime": "2017-08-16T00:15:14Z"
 		},
 		{
 			"checksumSHA1": "g/V4qrXjUGG9B+e3hB+4NAYJ5Gs=",
@@ -62,95 +50,10 @@
 			"revisionTime": "2017-05-28T13:23:59Z"
 		},
 		{
-			"checksumSHA1": "aodj/cITRyuaZSh84DDhrZjh76U=",
-			"path": "github.com/matttproud/golang_protobuf_extensions/pbutil",
-			"revision": "v1.0.0",
-			"version": "v1.0.0",
-			"versionExact": "v1.0.0"
-		},
-		{
-			"checksumSHA1": "r6FWlXmB8+VZ435R66DV9OFk4fw=",
-			"path": "github.com/prometheus/client_golang/prometheus",
-			"revision": "61d8c3f402672e3f5ead16d09720c90cc4b868af",
-			"revisionTime": "2017-08-29T15:37:40Z"
-		},
-		{
-			"checksumSHA1": "xA9iGjZAc125rFEDIs2Itj7mF3o=",
-			"path": "github.com/prometheus/client_golang/prometheus/promhttp",
-			"revision": "61d8c3f402672e3f5ead16d09720c90cc4b868af",
-			"revisionTime": "2017-08-29T15:37:40Z"
-		},
-		{
-			"checksumSHA1": "DvwvOlPNAgRntBzt3b3OSRMS2N4=",
-			"path": "github.com/prometheus/client_model/go",
-			"revision": "6f3806018612930941127f2a7c6c453ba2c527d2",
-			"revisionTime": "2017-02-16T18:52:47Z"
-		},
-		{
-			"checksumSHA1": "xfnn0THnqNwjwimeTClsxahYrIo=",
-			"path": "github.com/prometheus/common/expfmt",
-			"revision": "61f87aac8082fa8c3c5655c7608d7478d46ac2ad",
-			"revisionTime": "2017-07-31T11:42:04Z"
-		},
-		{
-			"checksumSHA1": "GWlM3d2vPYyNATtTFgftS10/A9w=",
-			"path": "github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg",
-			"revision": "61f87aac8082fa8c3c5655c7608d7478d46ac2ad",
-			"revisionTime": "2017-07-31T11:42:04Z"
-		},
-		{
-			"checksumSHA1": "3VoqH7TFfzA6Ds0zFzIbKCUvBmw=",
-			"path": "github.com/prometheus/common/model",
-			"revision": "61f87aac8082fa8c3c5655c7608d7478d46ac2ad",
-			"revisionTime": "2017-07-31T11:42:04Z"
-		},
-		{
-			"checksumSHA1": "ihxJIjxtbEYdQKwA0D0nRipj95I=",
-			"path": "github.com/prometheus/procfs",
-			"revision": "e645f4e5aaa8506fc71d6edbc5c4ff02c04c46f2",
-			"revisionTime": "2017-07-03T10:12:42Z"
-		},
-		{
-			"checksumSHA1": "xCiFAAwVTrjsfZT1BIJQ3DgeNCY=",
-			"path": "github.com/prometheus/procfs/xfs",
-			"revision": "e645f4e5aaa8506fc71d6edbc5c4ff02c04c46f2",
-			"revisionTime": "2017-07-03T10:12:42Z"
-		},
-		{
 			"checksumSHA1": "X1OS3xGRiYiQ+xyMLdLCVTkDlBg=",
 			"path": "github.com/rlmcpherson/s3gof3r",
 			"revision": "864ae0bf7cf2e20c0002b7ea17f4d84fec1abc14",
 			"revisionTime": "2017-02-10T00:40:45Z"
-		},
-		{
-			"checksumSHA1": "9cE8jGLzJP+nF07HcBZlxvP4bMM=",
-			"path": "github.com/utilitywarehouse/go-operational/op",
-			"revision": "1893d0e062cc2c6e11c95f074c17378f85836f7b",
-			"revisionTime": "2017-03-27T09:49:59Z"
-		},
-		{
-			"checksumSHA1": "5Yb2z6UO+Arm/TEd+OEtdnwOt1A=",
-			"path": "golang.org/x/crypto/ssh/terminal",
-			"revision": "6a293f2d4b14b8e6d3f0539e383f6d0d30fce3fd",
-			"revisionTime": "2017-09-25T11:22:06Z"
-		},
-		{
-			"checksumSHA1": "GtamqiJoL7PGHsN454AoffBFMa8=",
-			"path": "golang.org/x/net/context",
-			"revision": "a337091b0525af65de94df2eb7e98bd9962dcbe2",
-			"revisionTime": "2016-10-09T20:39:03Z"
-		},
-		{
-			"checksumSHA1": "0pTcHZ43GApI5Lp33cN9RoWzdNk=",
-			"path": "golang.org/x/sys/unix",
-			"revision": "ab9e364efd8b52800ff7ee48a9ffba4e0ed78dfb",
-			"revisionTime": "2017-08-29T14:47:16Z"
-		},
-		{
-			"checksumSHA1": "ck5uxoEeMDUL/QqPvGvBmcbsJzg=",
-			"path": "golang.org/x/sys/windows",
-			"revision": "1e2299c37cc91a509f1b12369872d27be0ce98a6",
-			"revisionTime": "2017-11-09T13:50:42Z"
 		},
 		{
 			"checksumSHA1": "vGfePfr0+weQUeTM/71mu+LCFuE=",

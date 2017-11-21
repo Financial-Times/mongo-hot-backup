@@ -14,7 +14,6 @@ import (
 	"github.com/rlmcpherson/s3gof3r"
 	"gopkg.in/robfig/cron.v2"
 	"github.com/boltdb/bolt"
-	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"golang.org/x/time/rate"
@@ -233,11 +232,6 @@ func (m *mongobackup) backupScheduled(colls string, cronExpr string, dbPath stri
 
 	c := cron.New()
 
-	metric := prometheus.NewGaugeVec(prometheus.GaugeOpts{
-		Name: "mongo-hot-backup-status",
-		Help: "Captures whether last backup was ok or not",
-	}, []string{"database", "collection"})
-
 	var ids []scheduledJob
 
 	for _, collection := range parsed {
@@ -253,10 +247,7 @@ func (m *mongobackup) backupScheduled(colls string, cronExpr string, dbPath stri
 
 			if err != nil {
 				log.Errorf("Error backing up %s/%s: %v\n", coll.database, coll.collection, err)
-				metric.With(prometheus.Labels{"database": coll.database, "collection": coll.collection}).Set(0)
 				result.Success = false
-			} else {
-				metric.With(prometheus.Labels{"database": coll.database, "collection": coll.collection}).Set(1)
 			}
 
 			r, _ := json.Marshal(result)
@@ -460,7 +451,6 @@ func restoreCollectionFrom(connStr, database, collection string, reader io.Reade
 	_, err = bulk.Run()
 	log.Printf("finished restore of %s/%s. Duration: %v\n", database, collection, time.Since(start))
 	return err
-
 }
 
 func readNextBSON(reader io.Reader) ([]byte, error) {
