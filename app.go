@@ -204,31 +204,38 @@ type scheduledJobResult struct {
 }
 
 func (m *mongobackup) backupScheduled(colls string, cronExpr string, dbPath string, run bool) error {
-
+	log.Infof("backupScheduled() entered")
 	err := os.MkdirAll(filepath.Dir(dbPath), 0600)
 
 	if err != nil {
 		return err
 	}
-
+	log.Infof("os.MkdirAll() called with success")
 	db, err := bolt.Open(dbPath, 0600, nil)
 	if err != nil {
 		return err
 	}
+	log.Infof("bolt.Open() called with success")
 	defer db.Close()
 
-	db.Update(func(tx *bolt.Tx) error {
+	err = db.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte("Results"))
 		if err != nil {
 			return fmt.Errorf("create bucket: %s", err)
 		}
+		log.Infof("tx.CreateBucketIfNotExists() called with success")
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+	log.Infof("db.Update() called with success")
 
 	parsed, err := parseCollections(colls)
 	if err != nil {
 		return err
 	}
+	log.Infof("parseCollections(colls) called with success")
 
 	c := cron.New()
 
@@ -236,6 +243,7 @@ func (m *mongobackup) backupScheduled(colls string, cronExpr string, dbPath stri
 		Name: "mongo-hot-backup-status",
 		Help: "Captures whether last backup was ok or not",
 	}, []string{"database", "collection"})
+	log.Infof("prometheus.NewGaugeVec() called with success")
 
 	var ids []scheduledJob
 
@@ -257,6 +265,7 @@ func (m *mongobackup) backupScheduled(colls string, cronExpr string, dbPath stri
 			} else {
 				metric.With(prometheus.Labels{"database": coll.database, "collection": coll.collection}).Set(1)
 			}
+			log.Infof("m.backup() called with success")
 
 			r, _ := json.Marshal(result)
 			db.Update(func(tx *bolt.Tx) error {
@@ -264,11 +273,12 @@ func (m *mongobackup) backupScheduled(colls string, cronExpr string, dbPath stri
 				err := b.Put([]byte(fmt.Sprintf("%s/%s", coll.database, coll.collection)), r)
 				return err
 			})
+			log.Infof("db.Update() after m.backup() called with success")
 		}
 
 		// on startup, we are registering status metrics to notify prom of the last backup status immediately
 		// we are also checking how long has it been since last backup, and if more than 13h we will trigger backup immediately
-		db.View(func(tx *bolt.Tx) error {
+		err = db.View(func(tx *bolt.Tx) error {
 			b := tx.Bucket([]byte("Results"))
 			v := b.Get([]byte(fmt.Sprintf("%s/%s", coll.database, coll.collection)))
 
@@ -288,6 +298,10 @@ func (m *mongobackup) backupScheduled(colls string, cronExpr string, dbPath stri
 
 			return nil
 		})
+		if err != nil {
+			return err
+		}
+		log.Infof("db.View() called with success")
 
 		eId, _ := c.AddFunc(cronExpr, func() { //now we add the cron methods
 
