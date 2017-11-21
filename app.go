@@ -278,33 +278,37 @@ func (m *mongobackup) backupScheduled(colls string, cronExpr string, dbPath stri
 
 		// on startup, we are registering status metrics to notify prom of the last backup status immediately
 		// we are also checking how long has it been since last backup, and if more than 13h we will trigger backup immediately
-		err = db.View(func(tx *bolt.Tx) error {
-			b := tx.Bucket([]byte("Results"))
-			v := b.Get([]byte(fmt.Sprintf("%s/%s", coll.database, coll.collection)))
+		//err = db.View(func(tx *bolt.Tx) error {
+		//	b := tx.Bucket([]byte("Results"))
+		//	v := b.Get([]byte(fmt.Sprintf("%s/%s", coll.database, coll.collection)))
+		//
+		//	result := scheduledJobResult{}
+		//
+		//	json.Unmarshal(v, &result)
+		//
+		//	if !result.Success {
+		//		metric.With(prometheus.Labels{"database": coll.database, "collection": coll.collection}).Set(0)
+		//	} else {
+		//		metric.With(prometheus.Labels{"database": coll.database, "collection": coll.collection}).Set(1)
+		//	}
 
-			result := scheduledJobResult{}
-
-			json.Unmarshal(v, &result)
-
-			if !result.Success {
-				metric.With(prometheus.Labels{"database": coll.database, "collection": coll.collection}).Set(0)
-			} else {
-				metric.With(prometheus.Labels{"database": coll.database, "collection": coll.collection}).Set(1)
-			}
-
-			if time.Since(result.Timestamp).Hours() > 13 && run {
+			if run {
+				log.Infof("calling cronFunc()")
 				go cronFunc()
+			} else {
+				log.Infof("not calling cronFunc()")
 			}
-
-			return nil
-		})
-		if err != nil {
-			return err
-		}
+		//
+		//	return nil
+		//})
+		//if err != nil {
+		//	return err
+		//}
 		log.Infof("db.View() called with success")
 
 		eId, _ := c.AddFunc(cronExpr, func() { //now we add the cron methods
 
+			log.Infof("calling cronFunc()")
 			cronFunc()
 
 			for _, job := range ids {
