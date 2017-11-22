@@ -101,7 +101,19 @@
 			"path": "gopkg.in/robfig/cron.v2",
 			"revision": "be2e0b0deed5a68ffee390b4583a13aff8321535",
 			"revisionTime": "2015-01-07T22:02:07Z"
-		}
+		},
+		{
+		    "checksumSHA1": "0pTcHZ43GApI5Lp33cN9RoWzdNk=",
+		    "path": "golang.org/x/sys/unix",
+		    "revision": "ab9e364efd8b52800ff7ee48a9ffba4e0ed78dfb",
+			"revisionTime": "2017-08-29T14:47:16Z"
+		},
+		{
+		    "checksumSHA1": "5Yb2z6UO+Arm/TEd+OEtdnwOt1A=",
+		    "path": "golang.org/x/crypto/ssh/terminal",
+		    "revision": "6a293f2d4b14b8e6d3f0539e383f6d0d30fce3fd",
+		    "revisionTime": "2017-09-25T11:22:06Z"
+	    },
 	],
 	"rootPath": "github.com/Financial-Times/mongo-hot-backup"
 }
