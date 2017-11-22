@@ -113,7 +113,7 @@
 		    "path": "golang.org/x/crypto/ssh/terminal",
 		    "revision": "6a293f2d4b14b8e6d3f0539e383f6d0d30fce3fd",
 		    "revisionTime": "2017-09-25T11:22:06Z"
-	    },
+	    }
 	],
 	"rootPath": "github.com/Financial-Times/mongo-hot-backup"
 }
