@@ -7,7 +7,6 @@ import (
 	"time"
 	"github.com/jawher/mow.cli"
 	"github.com/rlmcpherson/s3gof3r"
-	"gopkg.in/robfig/cron.v2"
 	log "github.com/Sirupsen/logrus"
 )
 
@@ -27,49 +26,43 @@ func main() {
 		EnvVar: "MONGODB",
 		Value:  "localhost:27017",
 	})
-
 	s3domain := app.String(cli.StringOpt{
 		Name:   "s3domain",
 		Desc:   "s3 domain",
 		EnvVar: "S3_DOMAIN",
 		Value:  "s3-eu-west-1.amazonaws.com",
 	})
-
 	s3bucket := app.String(cli.StringOpt{
 		Name:   "bucket",
 		Desc:   "s3 bucket name",
 		EnvVar: "S3_BUCKET",
 		Value:  "com.ft.coco-mongo-backup.prod",
 	})
-
 	s3dir := app.String(cli.StringOpt{
 		Name:   "base-dir",
 		Desc:   "s3 base directory name",
 		EnvVar: "S3_DIR",
 		Value:  "/backups/",
 	})
-
 	accessKey := app.String(cli.StringOpt{
 		Name:   "aws_access_key_id",
 		Desc:   "AWS Access key id",
 		EnvVar: "AWS_ACCESS_KEY_ID",
 	})
-
 	secretKey := app.String(cli.StringOpt{
 		Name:      "aws_secret_access_key",
 		Desc:      "AWS secret access key",
 		EnvVar:    "AWS_SECRET_ACCESS_KEY",
 		HideValue: true,
 	})
+	colls := app.String(cli.StringOpt{
+		Name:   "collections",
+		Desc:   "Collections to process (comma separated <database>/<collection>)",
+		EnvVar: "MONGODB_COLLECTIONS",
+		Value:  "foo/content,foo/bar",
+	})
 
 	app.Command("scheduled-backup", "backup a set of mongodb collections", func(cmd *cli.Cmd) {
-		colls := cmd.String(cli.StringOpt{
-			Name:   "collections",
-			Desc:   "Collections to process (comma separated <database>/<collection>)",
-			EnvVar: "MONGODB_COLLECTIONS",
-			Value:  "foo/content,foo/bar",
-		})
-
 		cronExpr := cmd.String(cli.StringOpt{
 			Name:   "cron",
 			Desc:   "Cron expression for when to run",
@@ -77,14 +70,12 @@ func main() {
 			Value:  "30 10 * * *",
 			//Value:  "@every 30s",
 		})
-
 		dbPath := cmd.String(cli.StringOpt{
 			Name:   "dbPath",
 			Desc:   "Path to store boltdb file",
 			EnvVar: "DBPATH",
 			Value:  "/var/data/mongobackup/state.db",
 		})
-
 		run := cmd.Bool(cli.BoolOpt{
 			Name:   "run",
 			Desc:   "Run backups on startup?",
@@ -102,12 +93,6 @@ func main() {
 	})
 
 	app.Command("backup", "backup a set of mongodb collections", func(cmd *cli.Cmd) {
-		colls := cmd.String(cli.StringOpt{
-			Name:   "collections",
-			Desc:   "Collections to process (comma separated <database>/<collection>)",
-			EnvVar: "MONGODB_COLLECTIONS",
-			Value:  "foo/content,foo/bar",
-		})
 		cmd.Action = func() {
 			mongoService := newMongoService()
 			backupService := newBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
@@ -117,12 +102,6 @@ func main() {
 		}
 	})
 	app.Command("restore", "restore a set of mongodb collections", func(cmd *cli.Cmd) {
-		colls := cmd.String(cli.StringOpt{
-			Name:   "collections",
-			Desc:   "Collections to process (comma separated <database>/<collection>)",
-			EnvVar: "MONGODB_COLLECTIONS",
-			Value:  "foo/content,foo/bar",
-		})
 		dateDir := cmd.String(cli.StringOpt{
 			Name:   "date",
 			Desc:   "Date to restore backup from",
@@ -142,16 +121,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-}
-
-type scheduledJob struct {
-	eId  cron.EntryID
-	coll collName
-}
-
-type scheduledJobResult struct {
-	Success   bool
-	Timestamp time.Time
 }
 
 type collName struct {

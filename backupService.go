@@ -24,6 +24,16 @@ type backupService struct {
 	s3               *s3gof3r.S3
 }
 
+type scheduledJob struct {
+	eId  cron.EntryID
+	coll collName
+}
+
+type scheduledJobResult struct {
+	Success   bool
+	Timestamp time.Time
+}
+
 func newBackupService(dbService dbService, connectionString, s3bucket, s3dir, s3domain, accessKey, secretKey string) *backupService {
 	return &backupService{
 		dbService,
