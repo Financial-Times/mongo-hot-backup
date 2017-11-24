@@ -20,7 +20,7 @@ type healthConfig struct {
 	appName       string
 }
 
-func newHealthService(db *bolt.DB, collections []collName, config healthConfig) *healthService {
+func newHealthService(db *bolt.DB, collections []fullColl, config healthConfig) *healthService {
 	hService := &healthService{
 		db: db,
 		config: config,

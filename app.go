@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"time"
 	"github.com/jawher/mow.cli"
 	"github.com/rlmcpherson/s3gof3r"
 	log "github.com/Sirupsen/logrus"
@@ -84,9 +83,13 @@ func main() {
 		})
 
 		cmd.Action = func() {
+			parsedColls, err := parseCollections(*colls)
+			if err != nil {
+				log.Fatalf("error parsing collections parameter: %v\n", err)
+			}
 			mongoService := newMongoService()
 			backupService := newBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
-			if err := backupService.backupScheduled(*colls, *cronExpr, *dbPath, *run); err != nil {
+			if err := backupService.backupScheduled(parsedColls, *cronExpr, *dbPath, *run); err != nil {
 				log.Fatalf("backup failed : %v\n", err)
 			}
 		}
@@ -94,9 +97,13 @@ func main() {
 
 	app.Command("backup", "backup a set of mongodb collections", func(cmd *cli.Cmd) {
 		cmd.Action = func() {
+			parsedColls, err := parseCollections(*colls)
+			if err != nil {
+				log.Fatalf("error parsing collections parameter: %v\n", err)
+			}
 			mongoService := newMongoService()
 			backupService := newBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
-			if err := backupService.backupAll(*colls); err != nil {
+			if err := backupService.backupAll(parsedColls); err != nil {
 				log.Fatalf("backup failed : %v\n", err)
 			}
 		}
@@ -109,9 +116,13 @@ func main() {
 			Value:  dateFormat,
 		})
 		cmd.Action = func() {
+			parsedColls, err := parseCollections(*colls)
+			if err != nil {
+				log.Fatalf("error parsing collections parameter: %v\n", err)
+			}
 			mongoService := newMongoService()
 			backupService := newBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
-			if err := backupService.restoreAll(*dateDir, *colls); err != nil {
+			if err := backupService.restoreAll(*dateDir, parsedColls); err != nil {
 				log.Fatalf("restore failed : %v\n", err)
 			}
 		}
@@ -123,24 +134,20 @@ func main() {
 	}
 }
 
-type collName struct {
+type fullColl struct {
 	database   string
 	collection string
 }
 
-func parseCollections(colls string) ([]collName, error) {
-	var cn []collName
+func parseCollections(colls string) ([]fullColl, error) {
+	var cn []fullColl
 	for _, coll := range strings.Split(colls, ",") {
 		c := strings.Split(coll, "/")
 		if len(c) != 2 {
 			return nil, fmt.Errorf("failed to parse connections string : %s\n", colls)
 		}
-		cn = append(cn, collName{c[0], c[1]})
+		cn = append(cn, fullColl{c[0], c[1]})
 	}
 
 	return cn, nil
-}
-
-func formattedNow() string {
-	return time.Now().UTC().Format(dateFormat)
 }

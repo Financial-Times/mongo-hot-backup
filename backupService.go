@@ -26,7 +26,7 @@ type backupService struct {
 
 type scheduledJob struct {
 	eId  cron.EntryID
-	coll collName
+	coll fullColl
 }
 
 type scheduledJobResult struct {
@@ -50,13 +50,9 @@ func newBackupService(dbService dbService, connectionString, s3bucket, s3dir, s3
 	}
 }
 
-func (m *backupService) backupAll(colls string) error {
-	parsed, err := parseCollections(colls)
-	if err != nil {
-		return err
-	}
+func (m *backupService) backupAll(colls []fullColl) error {
 	dateDir := formattedNow()
-	for _, coll := range parsed {
+	for _, coll := range colls {
 		dir := filepath.Join(m.s3dir, dateDir)
 		err := m.backup(dir, coll.database, coll.collection)
 
@@ -67,7 +63,7 @@ func (m *backupService) backupAll(colls string) error {
 	return nil
 }
 
-func (m *backupService) backupScheduled(colls string, cronExpr string, dbPath string, run bool) error {
+func (m *backupService) backupScheduled(colls []fullColl, cronExpr string, dbPath string, run bool) error {
 	err := os.MkdirAll(filepath.Dir(dbPath), 0600)
 
 	if err != nil {
@@ -90,16 +86,11 @@ func (m *backupService) backupScheduled(colls string, cronExpr string, dbPath st
 		return err
 	}
 
-	parsed, err := parseCollections(colls)
-	if err != nil {
-		return err
-	}
-
 	c := cron.New()
 
 	var ids []scheduledJob
 
-	for _, collection := range parsed {
+	for _, collection := range colls {
 
 		coll := collection
 
@@ -149,7 +140,7 @@ func (m *backupService) backupScheduled(colls string, cronExpr string, dbPath st
 		log.Printf("Next scheduled run for '%s/%s': %v\n", job.coll.database, job.coll.collection, c.Entry(job.eId).Next)
 	}
 
-	healthService := newHealthService(db, parsed, healthConfig{
+	healthService := newHealthService(db, colls, healthConfig{
 		appSystemCode: "up-mgz",
 		appName: "mongobackup",
 	})
@@ -169,7 +160,6 @@ func (m *backupService) backupScheduled(colls string, cronExpr string, dbPath st
 }
 
 func (m *backupService) backup(dir, database, collection string) error {
-
 	start := time.Now()
 	log.Printf("backing up %s/%s to %s in %s\n", database, collection, dir, m.s3bucket)
 
@@ -197,12 +187,8 @@ func (m *backupService) backup(dir, database, collection string) error {
 	return err
 }
 
-func (m *backupService) restoreAll(dateDir string, colls string) error {
-	parsed, err := parseCollections(colls)
-	if err != nil {
-		return err
-	}
-	for _, coll := range parsed {
+func (m *backupService) restoreAll(dateDir string, colls []fullColl) error {
+	for _, coll := range colls {
 		dir := filepath.Join(m.s3dir, dateDir)
 		err := m.restore(dir, coll.database, coll.collection)
 		if err != nil {
@@ -228,4 +214,8 @@ func (m *backupService) restore(dir, database, collection string) error {
 		return err
 	}
 	return nil
+}
+
+func formattedNow() string {
+	return time.Now().UTC().Format(dateFormat)
 }
