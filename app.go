@@ -93,8 +93,9 @@ func main() {
 		})
 
 		cmd.Action = func() {
-			m := newMongoBackup(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
-			if err := m.backupScheduled(*colls, *cronExpr, *dbPath, *run); err != nil {
+			mongoService := newMongoService()
+			backupService := newBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
+			if err := backupService.backupScheduled(*colls, *cronExpr, *dbPath, *run); err != nil {
 				log.Fatalf("backup failed : %v\n", err)
 			}
 		}
@@ -108,8 +109,9 @@ func main() {
 			Value:  "foo/content,foo/bar",
 		})
 		cmd.Action = func() {
-			m := newMongoBackup(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
-			if err := m.backupAll(*colls); err != nil {
+			mongoService := newMongoService()
+			backupService := newBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
+			if err := backupService.backupAll(*colls); err != nil {
 				log.Fatalf("backup failed : %v\n", err)
 			}
 		}
@@ -128,8 +130,9 @@ func main() {
 			Value:  dateFormat,
 		})
 		cmd.Action = func() {
-			m := newMongoBackup(*connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
-			if err := m.restoreAll(*dateDir, *colls); err != nil {
+			mongoService := newMongoService()
+			backupService := newBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
+			if err := backupService.restoreAll(*dateDir, *colls); err != nil {
 				log.Fatalf("restore failed : %v\n", err)
 			}
 		}
