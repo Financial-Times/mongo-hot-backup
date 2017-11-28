@@ -14,7 +14,7 @@ import (
 )
 
 type dbService interface {
-	DumpCollectionTo(connStr string, database, collection string, writer io.Writer) error
+	DumpCollectionTo(connStr, database, collection string, writer io.Writer) error
 	RestoreCollectionFrom(connStr, database, collection string, reader io.Reader) error
 }
 
@@ -26,7 +26,7 @@ func newMongoService(mgoLib mongoLib) *mongoService {
 	return &mongoService{mgoLib: mgoLib}
 }
 
-func (m *mongoService) DumpCollectionTo(connStr string, database, collection string, writer io.Writer) error {
+func (m *mongoService) DumpCollectionTo(connStr, database, collection string, writer io.Writer) error {
 	session, err := m.mgoLib.Dial(connStr)
 	if err != nil {
 		return err
@@ -34,9 +34,7 @@ func (m *mongoService) DumpCollectionTo(connStr string, database, collection str
 	session.SetPrefetch(1.0)
 	defer session.Close()
 
-	q := session.DB(database).C(collection).Find(nil).Snapshot()
-	q := session.Snapshot(database, collection, findQuery)
-	iter := q.Iter()
+	iter := session.SnapshotIter(database, collection, nil)
 
 	for {
 		raw := &bson.Raw{}

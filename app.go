@@ -121,7 +121,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
-			mongoService := newMongoService()
+			mongoService := newMongoService(&labixMongo{})
 			backupService := newBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
 			if err := backupService.restoreAll(*dateDir, parsedColls); err != nil {
 				log.Fatalf("restore failed : %v\n", err)

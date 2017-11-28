@@ -21,7 +21,7 @@ func (m *labixMongo) Dial(url string) (*labixSession, error) {
 type mongoSession interface {
 	SetPrefetch(p float64)
 	Close()
-	DB(name string) mongoDatabase
+	SnapshotIter(database, collection string, findQuery interface{}) mongoIter
 }
 
 type labixSession struct {
@@ -36,53 +36,8 @@ func (s *labixSession) Close() {
 	s.session.Close()
 }
 
-func (s *labixSession) Snapshot(database, collection string, findQuery interface{}) *labixQuery {
-	return &labixQuery{s.session.DB(database).C(collection).Find(findQuery).Snapshot()}
-}
-
-func (s *labixSession) DB(name string) *labixDatabase {
-	return &labixDatabase{s.session.DB(name)}
-}
-
-type mongoDatabase interface {
-	C(name string) mongoCollection
-}
-
-type labixDatabase struct {
-	database *mgo.Database
-}
-
-func (d *labixDatabase) C(name string) *labixCollection {
-	return &labixCollection{d.database.C(name)}
-}
-
-type mongoCollection interface {
-	Find(query interface{}) mongoQuery
-}
-
-type labixCollection struct {
-	collection *mgo.Collection
-}
-
-func (c *labixCollection) Find(query interface{}) *labixQuery {
-	return &labixQuery{c.collection.Find(query)}
-}
-
-type mongoQuery interface {
-	Snapshot() mongoQuery
-	Iter() mongoIter
-}
-
-type labixQuery struct {
-	query *mgo.Query
-}
-
-func (q *labixQuery) Snapshot() *labixQuery {
-	return &labixQuery{q.query.Snapshot()}
-}
-
-func (q *labixQuery) Iter() *labixIter {
-	return &labixIter{q.query.Iter()}
+func (s *labixSession) SnapshotIter(database, collection string, findQuery interface{}) *labixIter {
+	return &labixIter{s.session.DB(database).C(collection).Find(findQuery).Snapshot().Iter()}
 }
 
 type mongoIter interface {
