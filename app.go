@@ -87,8 +87,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
-			mgoLib := &labixMongo{}
-			mongoService := newMongoService(mgoLib)
+			mongoService := newMongoService(&labixMongo{})
 			backupService := newBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
 			if err := backupService.backupScheduled(parsedColls, *cronExpr, *dbPath, *run); err != nil {
 				log.Fatalf("backup failed : %v\n", err)
@@ -102,7 +101,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
-			mongoService := newMongoService()
+			mongoService := newMongoService(&labixMongo{})
 			backupService := newBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
 			if err := backupService.backupAll(parsedColls); err != nil {
 				log.Fatalf("backup failed : %v\n", err)

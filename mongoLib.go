@@ -10,7 +10,7 @@ type mongoLib interface {
 
 type labixMongo struct {}
 
-func (m *labixMongo) Dial(url string) (*labixSession, error) {
+func (m *labixMongo) Dial(url string) (mongoSession, error) {
 	session, err := mgo.Dial(url)
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func (s *labixSession) Close() {
 	s.session.Close()
 }
 
-func (s *labixSession) SnapshotIter(database, collection string, findQuery interface{}) *labixIter {
+func (s *labixSession) SnapshotIter(database, collection string, findQuery interface{}) mongoIter {
 	return &labixIter{s.session.DB(database).C(collection).Find(findQuery).Snapshot().Iter()}
 }
 
