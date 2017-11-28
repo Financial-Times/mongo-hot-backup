@@ -2,6 +2,7 @@ package main
 
 import (
 	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 type mongoLib interface {
@@ -41,7 +42,7 @@ func (s *labixSession) SnapshotIter(database, collection string, findQuery inter
 }
 
 type mongoIter interface {
-	Next(result interface{}) bool
+	Next() ([]byte, bool)
 	Err() error
 }
 
@@ -49,10 +50,12 @@ type labixIter struct {
 	iter *mgo.Iter
 }
 
-func (i *labixIter) Next(result interface{}) bool {
-	return i.iter.Next(result)
+func (i *labixIter) Next() ([]byte, bool) {
+	result := &bson.Raw{}
+	hasNext := i.iter.Next(result)
+	return result.Data, hasNext
 }
 
 func (i *labixIter) Err() error {
-	return i.Err()
+	return i.iter.Err()
 }

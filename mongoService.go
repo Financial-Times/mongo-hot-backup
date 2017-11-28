@@ -37,12 +37,11 @@ func (m *mongoService) DumpCollectionTo(connStr, database, collection string, wr
 	iter := session.SnapshotIter(database, collection, nil)
 
 	for {
-		raw := &bson.Raw{}
-		next := iter.Next(raw)
-		if !next {
+		result, hasNext := iter.Next()
+		if !hasNext {
 			break
 		}
-		_, err := writer.Write(raw.Data)
+		_, err := writer.Write(result)
 		if err != nil {
 			return err
 		}
