@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/assert"
 	"fmt"
+	"time"
 )
 
 func TestDumpCollectionTo_Ok(t *testing.T) {
@@ -84,8 +85,8 @@ type mockMongoLib struct {
 	mock.Mock
 }
 
-func (m *mockMongoLib) Dial(url string) (mongoSession, error) {
-	args := m.Called(url)
+func (m *mockMongoLib) DialWithTimeout(url string, timeout time.Duration) (mongoSession, error) {
+	args := m.Called(url, timeout)
 	return args.Get(0).(mongoSession), args.Error(1)
 }
 

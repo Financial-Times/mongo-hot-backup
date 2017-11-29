@@ -3,16 +3,17 @@ package main
 import (
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"time"
 )
 
 type mongoLib interface {
-	Dial(url string) (mongoSession, error)
+	DialWithTimeout(url string, timeout time.Duration) (mongoSession, error)
 }
 
 type labixMongo struct {}
 
-func (m *labixMongo) Dial(url string) (mongoSession, error) {
-	session, err := mgo.Dial(url)
+func (m *labixMongo) DialWithTimeout(url string, timeout time.Duration) (mongoSession, error) {
+	session, err := mgo.DialWithTimeout(url, timeout)
 	if err != nil {
 		return nil, err
 	}
@@ -23,6 +24,8 @@ type mongoSession interface {
 	SetPrefetch(p float64)
 	Close()
 	SnapshotIter(database, collection string, findQuery interface{}) mongoIter
+	RemoveAll(database, collection string, removeQuery interface{}) error
+	Bulk(database, collection string) mongoBulk
 }
 
 type labixSession struct {
@@ -39,6 +42,33 @@ func (s *labixSession) Close() {
 
 func (s *labixSession) SnapshotIter(database, collection string, findQuery interface{}) mongoIter {
 	return &labixIter{s.session.DB(database).C(collection).Find(findQuery).Snapshot().Iter()}
+}
+
+func (s *labixSession) RemoveAll(database, collection string, removeQuery interface{}) error {
+	_, err := s.session.DB(database).C(collection).RemoveAll(nil)
+	return err
+}
+
+func (s *labixSession) Bulk(database, collection string) mongoBulk {
+	return &labixBulk{s.session.DB(database).C(collection).Bulk()}
+}
+
+type mongoBulk interface {
+	Run() error
+	Insert(data []byte)
+}
+
+type labixBulk struct {
+	bulk *mgo.Bulk
+}
+
+func (b *labixBulk) Run() error {
+	_, err := b.bulk.Run()
+	return err
+}
+
+func (b *labixBulk) Insert(data []byte) {
+	b.bulk.Insert(bson.Raw{Data: data})
 }
 
 type mongoIter interface {

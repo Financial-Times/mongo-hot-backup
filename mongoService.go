@@ -27,7 +27,7 @@ func newMongoService(mgoLib mongoLib) *mongoService {
 }
 
 func (m *mongoService) DumpCollectionTo(connStr, database, collection string, writer io.Writer) error {
-	session, err := m.mgoLib.Dial(connStr)
+	session, err := m.mgoLib.DialWithTimeout(connStr, 0)
 	if err != nil {
 		return err
 	}
@@ -51,7 +51,7 @@ func (m *mongoService) DumpCollectionTo(connStr, database, collection string, wr
 }
 
 func (m *mongoService) RestoreCollectionFrom(connStr, database, collection string, reader io.Reader) error {
-	session, err := mgo.DialWithTimeout(connStr, 0)
+	session, err := m.mgoLib.DialWithTimeout(connStr, 0)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (m *mongoService) RestoreCollectionFrom(connStr, database, collection strin
 	start := time.Now()
 	log.Printf("starting restore of %s/%s\n", database, collection)
 
-	bulk := session.DB(database).C(collection).Bulk()
+	bulk := session.Bulk(database, collection)
 
 	var batchBytes int
 	batchStart := time.Now()
@@ -87,7 +87,7 @@ func (m *mongoService) RestoreCollectionFrom(connStr, database, collection strin
 		// the limit, write the batch out now. 15000000 is intended to be within the
 		// expected 16MB limit
 		if batchBytes > 0 && batchBytes+len(next) > 15000000 {
-			_, err = bulk.Run()
+			err = bulk.Run()
 			if err != nil {
 				return err
 			}
@@ -98,16 +98,16 @@ func (m *mongoService) RestoreCollectionFrom(connStr, database, collection strin
 			// rate limit between writes to prevent overloading MongoDB
 			limiter.Wait(context.Background())
 
-			bulk = session.DB(database).C(collection).Bulk()
+			bulk = session.Bulk(database, collection)
 			batchBytes = 0
 			batchStart = time.Now()
 		}
 
-		bulk.Insert(bson.Raw{Data: next})
+		bulk.Insert(next)
 
 		batchBytes += len(next)
 	}
-	_, err = bulk.Run()
+	err = bulk.Run()
 	log.Printf("finished restore of %s/%s. Duration: %v\n", database, collection, time.Since(start))
 	return err
 }
@@ -143,10 +143,10 @@ func (m *mongoService) readNextBSON(reader io.Reader) ([]byte, error) {
 	return buf, nil
 }
 
-func (m *mongoService) clearCollection(session *mgo.Session, database, collection string) error {
+func (m *mongoService) clearCollection(session mongoSession, database, collection string) error {
 	start := time.Now()
 	log.Printf("clearing collection %s/%s\n", database, collection)
-	_, err := session.DB(database).C(collection).RemoveAll(nil)
+	err := session.RemoveAll(database, collection, nil)
 	log.Printf("finished clearing collection %s/%s. Duration : %v\n", database, collection, time.Now().Sub(start))
 
 	return err
