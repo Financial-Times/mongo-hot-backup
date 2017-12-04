@@ -97,21 +97,16 @@ func TestRestoreCollectionFrom_Ok(t *testing.T) {
 	mockedBsonService.On("ReadNextBSON", mock.MatchedBy(func(reader io.Reader) bool { return true })).Times(3).Return([]byte("bson"), nil)
 	var end []byte
 	mockedBsonService.On("ReadNextBSON", mock.MatchedBy(func(reader io.Reader) bool { return true })).Return(end, nil)
-	// insertedBytes := make([]byte, 0, 8)
-	var insertedCount int
+	insertedData := make([]byte, 0, 8)
 	mockedMongoBulk.On("Insert", []byte("bson")).Return().Run(func(args mock.Arguments) {
-		// arg := args.Get(0).(*map[string]interface{})
-		// d := arg["data"]
-		// insertedBytes := append(insertedBytes, d.([]byte))
-		insertedCount++
+		insertedData = append(insertedData, args.Get(0).([]byte)...)
 	})
-
 	mockedMongoBulk.On("Run").Return(nil)
 
 	err := mongoService.RestoreCollectionFrom("127.0.0.1:27010,127.0.0.2:27010", "database1", "collection1", strings.NewReader("nothing"))
 
 	assert.NoError(t, err, "Error wasn't expected during restore.")
-	assert.Equal(t, 3, insertedCount)
+	assert.Equal(t, []byte("bsonbsonbson"), insertedData)
 }
 
 type mockMongoLib struct {
