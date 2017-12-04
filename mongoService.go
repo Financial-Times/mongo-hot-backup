@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/binary"
-	"fmt"
 	"io"
 	"time"
 
@@ -18,11 +16,12 @@ type dbService interface {
 }
 
 type mongoService struct {
-	mgoLib mongoLib
+	mgoLib      mongoLib
+	bsonService bsonService
 }
 
-func newMongoService(mgoLib mongoLib) *mongoService {
-	return &mongoService{mgoLib: mgoLib}
+func newMongoService(mgoLib mongoLib, bsonService bsonService) *mongoService {
+	return &mongoService{mgoLib: mgoLib, bsonService: bsonService}
 }
 
 func (m *mongoService) DumpCollectionTo(connStr, database, collection string, writer io.Writer) error {
@@ -74,7 +73,7 @@ func (m *mongoService) RestoreCollectionFrom(connStr, database, collection strin
 
 	for {
 
-		next, err := m.readNextBSON(reader)
+		next, err := m.bsonService.ReadNextBSON(reader)
 		if err != nil {
 			return err
 		}
@@ -109,37 +108,6 @@ func (m *mongoService) RestoreCollectionFrom(connStr, database, collection strin
 	err = bulk.Run()
 	log.Printf("finished restore of %s/%s. Duration: %v\n", database, collection, time.Since(start))
 	return err
-}
-
-func (m *mongoService) readNextBSON(reader io.Reader) ([]byte, error) {
-	var lenBytes [4]byte
-
-	_, err := io.ReadFull(reader, lenBytes[:])
-	if err != nil {
-		if err != io.EOF {
-			return nil, err
-		}
-		return nil, nil
-	}
-
-	docLen := int32(binary.LittleEndian.Uint32(lenBytes[:]))
-
-	if docLen < 5 {
-		return nil, fmt.Errorf("invalid document size: %v bytes", docLen)
-	}
-
-	buf := make([]byte, docLen)
-	copy(buf, lenBytes[:])
-
-	_, err = io.ReadAtLeast(reader, buf[4:], int(docLen-4))
-	if err != nil {
-		if err == io.EOF {
-			// this is a broken document.
-			return nil, io.ErrUnexpectedEOF
-		}
-		return nil, err
-	}
-	return buf, nil
 }
 
 func (m *mongoService) clearCollection(session mongoSession, database, collection string) error {

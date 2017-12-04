@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	log "github.com/Sirupsen/logrus"
 	"github.com/jawher/mow.cli"
 	"github.com/rlmcpherson/s3gof3r"
-	log "github.com/Sirupsen/logrus"
 )
 
 const (
-	extension = ".bson.snappy"
+	extension  = ".bson.snappy"
 	dateFormat = "2006-01-02T15-04-05"
 )
 
@@ -87,7 +88,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
-			mongoService := newMongoService(&labixMongo{})
+			mongoService := newMongoService(&labixMongo{}, &defaultBsonService{})
 			backupService := newBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
 			if err := backupService.backupScheduled(parsedColls, *cronExpr, *dbPath, *run); err != nil {
 				log.Fatalf("backup failed : %v\n", err)
@@ -101,7 +102,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
-			mongoService := newMongoService(&labixMongo{})
+			mongoService := newMongoService(&labixMongo{}, &defaultBsonService{})
 			backupService := newBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
 			if err := backupService.backupAll(parsedColls); err != nil {
 				log.Fatalf("backup failed : %v\n", err)
@@ -120,7 +121,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
-			mongoService := newMongoService(&labixMongo{})
+			mongoService := newMongoService(&labixMongo{}, &defaultBsonService{})
 			backupService := newBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
 			if err := backupService.restoreAll(*dateDir, parsedColls); err != nil {
 				log.Fatalf("restore failed : %v\n", err)
@@ -144,7 +145,7 @@ func parseCollections(colls string) ([]fullColl, error) {
 	for _, coll := range strings.Split(colls, ",") {
 		c := strings.Split(coll, "/")
 		if len(c) != 2 {
-			return nil, fmt.Errorf("failed to parse connections string : %s\n", colls)
+			return nil, fmt.Errorf("failed to parse connections string: %s\n", colls)
 		}
 		cn = append(cn, fullColl{c[0], c[1]})
 	}

@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"strings"
 	"testing"
 	"time"
 
@@ -12,7 +14,7 @@ import (
 
 func TestDumpCollectionTo_Ok(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
-	mongoService := newMongoService(mockedMongoLib)
+	mongoService := newMongoService(mockedMongoLib, nil)
 	stringWriter := bytes.NewBufferString("")
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
@@ -32,7 +34,7 @@ func TestDumpCollectionTo_Ok(t *testing.T) {
 
 func TestDumpCollectionTo_SessionErr(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
-	mongoService := newMongoService(mockedMongoLib)
+	mongoService := newMongoService(mockedMongoLib, nil)
 	stringWriter := bytes.NewBufferString("")
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(&labixSession{}, fmt.Errorf("oops"))
 
@@ -44,7 +46,7 @@ func TestDumpCollectionTo_SessionErr(t *testing.T) {
 
 func TestDumpCollectionTo_WriterErr(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
-	mongoService := newMongoService(mockedMongoLib)
+	mongoService := newMongoService(mockedMongoLib, nil)
 	cappedStringWriter := newCappedBuffer(make([]byte, 0, 4), 11)
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
@@ -63,7 +65,7 @@ func TestDumpCollectionTo_WriterErr(t *testing.T) {
 
 func TestDumpCollectionTo_IterationErr(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
-	mongoService := newMongoService(mockedMongoLib)
+	mongoService := newMongoService(mockedMongoLib, nil)
 	stringWriter := bytes.NewBufferString("")
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
@@ -80,6 +82,36 @@ func TestDumpCollectionTo_IterationErr(t *testing.T) {
 	assert.Error(t, err, "Error expected for iterator.")
 	assert.Equal(t, "datadatadata", stringWriter.String())
 	assert.Equal(t, "iteration error", err.Error())
+}
+
+func TestRestoreCollectionFrom_Ok(t *testing.T) {
+	mockedMongoLib := new(mockMongoLib)
+	mockedBsonService := new(mockBsonService)
+	mongoService := newMongoService(mockedMongoLib, mockedBsonService)
+	mockedMongoSession := new(mockMongoSession)
+	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
+	mockedMongoSession.On("RemoveAll", "database1", "collection1", nil).Return(nil)
+	mockedMongoSession.On("Close").Return()
+	mockedMongoBulk := new(mockMongoBulk)
+	mockedMongoSession.On("Bulk", "database1", "collection1").Return(mockedMongoBulk)
+	mockedBsonService.On("ReadNextBSON", mock.MatchedBy(func(reader io.Reader) bool { return true })).Times(3).Return([]byte("bson"), nil)
+	var end []byte
+	mockedBsonService.On("ReadNextBSON", mock.MatchedBy(func(reader io.Reader) bool { return true })).Return(end, nil)
+	// insertedBytes := make([]byte, 0, 8)
+	var insertedCount int
+	mockedMongoBulk.On("Insert", []byte("bson")).Return().Run(func(args mock.Arguments) {
+		// arg := args.Get(0).(*map[string]interface{})
+		// d := arg["data"]
+		// insertedBytes := append(insertedBytes, d.([]byte))
+		insertedCount++
+	})
+
+	mockedMongoBulk.On("Run").Return(nil)
+
+	err := mongoService.RestoreCollectionFrom("127.0.0.1:27010,127.0.0.2:27010", "database1", "collection1", strings.NewReader("nothing"))
+
+	assert.NoError(t, err, "Error wasn't expected during restore.")
+	assert.Equal(t, 3, insertedCount)
 }
 
 type mockMongoLib struct {
@@ -132,6 +164,19 @@ func (m *mockMongoIter) Err() error {
 	return args.Error(0)
 }
 
+type mockMongoBulk struct {
+	mock.Mock
+}
+
+func (m *mockMongoBulk) Run() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
+func (m *mockMongoBulk) Insert(data []byte) {
+	m.Called(data)
+}
+
 type cappedBuffer struct {
 	cap   int
 	mybuf *bytes.Buffer
@@ -141,9 +186,8 @@ func (b *cappedBuffer) Write(p []byte) (n int, err error) {
 	if len(p)+b.mybuf.Len() > b.cap {
 		fmt.Printf(b.mybuf.String())
 		return len(p), fmt.Errorf("buffer overflow")
-	} else {
-		b.mybuf.Write(p)
 	}
+	b.mybuf.Write(p)
 	return len(p), nil
 }
 
