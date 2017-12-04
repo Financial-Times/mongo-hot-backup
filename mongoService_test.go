@@ -1,12 +1,13 @@
 package main
 
 import (
-	"testing"
 	"bytes"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/assert"
 	"fmt"
+	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestDumpCollectionTo_Ok(t *testing.T) {
@@ -14,7 +15,7 @@ func TestDumpCollectionTo_Ok(t *testing.T) {
 	mongoService := newMongoService(mockedMongoLib)
 	stringWriter := bytes.NewBufferString("")
 	mockedMongoSession := new(mockMongoSession)
-	mockedMongoLib.On("Dial", "127.0.0.1:27010,127.0.0.2:27010").Return(mockedMongoSession, nil)
+	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
 	mockedMongoSession.On("SetPrefetch", 1.0).Return()
 	mockedMongoSession.On("Close").Return()
 	mockedMongoIter := new(mockMongoIter)
@@ -33,7 +34,7 @@ func TestDumpCollectionTo_SessionErr(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
 	mongoService := newMongoService(mockedMongoLib)
 	stringWriter := bytes.NewBufferString("")
-	mockedMongoLib.On("Dial", "127.0.0.1:27010,127.0.0.2:27010").Return(&labixSession{}, fmt.Errorf("oops"))
+	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(&labixSession{}, fmt.Errorf("oops"))
 
 	err := mongoService.DumpCollectionTo("127.0.0.1:27010,127.0.0.2:27010", "database1", "collection1", stringWriter)
 
@@ -46,7 +47,7 @@ func TestDumpCollectionTo_WriterErr(t *testing.T) {
 	mongoService := newMongoService(mockedMongoLib)
 	cappedStringWriter := newCappedBuffer(make([]byte, 0, 4), 11)
 	mockedMongoSession := new(mockMongoSession)
-	mockedMongoLib.On("Dial", "127.0.0.1:27010,127.0.0.2:27010").Return(mockedMongoSession, nil)
+	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
 	mockedMongoSession.On("SetPrefetch", 1.0).Return()
 	mockedMongoSession.On("Close").Return()
 	mockedMongoIter := new(mockMongoIter)
@@ -65,7 +66,7 @@ func TestDumpCollectionTo_IterationErr(t *testing.T) {
 	mongoService := newMongoService(mockedMongoLib)
 	stringWriter := bytes.NewBufferString("")
 	mockedMongoSession := new(mockMongoSession)
-	mockedMongoLib.On("Dial", "127.0.0.1:27010,127.0.0.2:27010").Return(mockedMongoSession, nil)
+	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
 	mockedMongoSession.On("SetPrefetch", 1.0).Return()
 	mockedMongoSession.On("Close").Return()
 	mockedMongoIter := new(mockMongoIter)
@@ -105,6 +106,16 @@ func (m *mockMongoSession) SetPrefetch(p float64) {
 
 func (m *mockMongoSession) Close() {
 	m.Called()
+}
+
+func (m *mockMongoSession) Bulk(database, collection string) mongoBulk {
+	args := m.Called(database, collection)
+	return args.Get(0).(mongoBulk)
+}
+
+func (m *mockMongoSession) RemoveAll(database, collection string, removeQuery interface{}) error {
+	args := m.Called(database, collection, removeQuery)
+	return args.Error(0)
 }
 
 type mockMongoIter struct {

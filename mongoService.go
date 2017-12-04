@@ -1,13 +1,12 @@
 package main
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"io"
 	"time"
-	"context"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+
 	"golang.org/x/time/rate"
 
 	log "github.com/Sirupsen/logrus"
@@ -71,7 +70,7 @@ func (m *mongoService) RestoreCollectionFrom(connStr, database, collection strin
 	batchStart := time.Now()
 
 	// set rate limit to 250ms
-	limiter := rate.NewLimiter(rate.Every(250 * time.Millisecond), 1)
+	limiter := rate.NewLimiter(rate.Every(250*time.Millisecond), 1)
 
 	for {
 
