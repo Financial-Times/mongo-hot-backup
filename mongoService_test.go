@@ -109,6 +109,19 @@ func TestRestoreCollectionFrom_Ok(t *testing.T) {
 	assert.Equal(t, []byte("bsonbsonbson"), insertedData)
 }
 
+func TestRestoreCollectionFrom_DialErr(t *testing.T) {
+	mockedMongoLib := new(mockMongoLib)
+	mockedBsonService := new(mockBsonService)
+	mongoService := newMongoService(mockedMongoLib, mockedBsonService)
+	mockedMongoSession := new(mockMongoSession)
+	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, fmt.Errorf("couldn't dial"))
+
+	err := mongoService.RestoreCollectionFrom("127.0.0.1:27010,127.0.0.2:27010", "database1", "collection1", strings.NewReader("nothing"))
+
+	assert.Error(t, err, "Error was expected during restore.")
+	assert.Equal(t, "couldn't dial", err.Error())
+}
+
 type mockMongoLib struct {
 	mock.Mock
 }
