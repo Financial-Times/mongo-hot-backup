@@ -89,8 +89,8 @@ func main() {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
 			mongoService := newMongoService(&labixMongo{}, &defaultBsonService{})
-			backupService := newBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
-			if err := backupService.backupScheduled(parsedColls, *cronExpr, *dbPath, *run); err != nil {
+			backupService := newMongoBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
+			if err := backupService.BackupScheduled(parsedColls, *cronExpr, *dbPath, *run); err != nil {
 				log.Fatalf("backup failed : %v\n", err)
 			}
 		}
@@ -103,8 +103,8 @@ func main() {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
 			mongoService := newMongoService(&labixMongo{}, &defaultBsonService{})
-			backupService := newBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
-			if err := backupService.backupAll(parsedColls); err != nil {
+			backupService := newMongoBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
+			if err := backupService.BackupAll(parsedColls); err != nil {
 				log.Fatalf("backup failed : %v\n", err)
 			}
 		}
@@ -122,8 +122,8 @@ func main() {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
 			mongoService := newMongoService(&labixMongo{}, &defaultBsonService{})
-			backupService := newBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
-			if err := backupService.restoreAll(*dateDir, parsedColls); err != nil {
+			backupService := newMongoBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
+			if err := backupService.RestoreAll(*dateDir, parsedColls); err != nil {
 				log.Fatalf("restore failed : %v\n", err)
 			}
 		}

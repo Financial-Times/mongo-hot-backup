@@ -3,20 +3,29 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
+
+	health "github.com/Financial-Times/go-fthealth/v1_1"
+	log "github.com/Sirupsen/logrus"
+	"github.com/boltdb/bolt"
+	"github.com/gorilla/mux"
+	"github.com/klauspost/compress/snappy"
 	"github.com/rlmcpherson/s3gof3r"
 	"gopkg.in/robfig/cron.v2"
-	"github.com/boltdb/bolt"
-	log "github.com/Sirupsen/logrus"
-	"github.com/klauspost/compress/snappy"
-	"net/http"
-	health "github.com/Financial-Times/go-fthealth/v1_1"
-	"github.com/gorilla/mux"
 )
 
-type backupService struct {
+type backupService interface {
+	Backup(dir, database, collection string) error
+	BackupAll(colls []fullColl) error
+	BackupScheduled(colls []fullColl, cronExpr string, dbPath string, run bool) error
+	RestoreAll(dateDir string, colls []fullColl) error
+	Restore(dir, database, collection string) error
+}
+
+type mongoBackupService struct {
 	dbService        dbService
 	connectionString string
 	s3bucket         string
@@ -34,8 +43,8 @@ type scheduledJobResult struct {
 	Timestamp time.Time
 }
 
-func newBackupService(dbService dbService, connectionString, s3bucket, s3dir, s3domain, accessKey, secretKey string) *backupService {
-	return &backupService{
+func newMongoBackupService(dbService dbService, connectionString, s3bucket, s3dir, s3domain, accessKey, secretKey string) *mongoBackupService {
+	return &mongoBackupService{
 		dbService,
 		connectionString,
 		s3bucket,
@@ -50,11 +59,11 @@ func newBackupService(dbService dbService, connectionString, s3bucket, s3dir, s3
 	}
 }
 
-func (m *backupService) backupAll(colls []fullColl) error {
+func (m *mongoBackupService) BackupAll(colls []fullColl) error {
 	dateDir := formattedNow()
 	for _, coll := range colls {
 		dir := filepath.Join(m.s3dir, dateDir)
-		err := m.backup(dir, coll.database, coll.collection)
+		err := m.Backup(dir, coll.database, coll.collection)
 
 		if err != nil {
 			return err
@@ -63,7 +72,7 @@ func (m *backupService) backupAll(colls []fullColl) error {
 	return nil
 }
 
-func (m *backupService) backupScheduled(colls []fullColl, cronExpr string, dbPath string, run bool) error {
+func (m *mongoBackupService) BackupScheduled(colls []fullColl, cronExpr string, dbPath string, run bool) error {
 	err := os.MkdirAll(filepath.Dir(dbPath), 0600)
 
 	if err != nil {
@@ -97,7 +106,7 @@ func (m *backupService) backupScheduled(colls []fullColl, cronExpr string, dbPat
 		cronFunc := func() {
 			dateDir := formattedNow()
 			dir := filepath.Join(m.s3dir, dateDir)
-			err := m.backup(dir, coll.database, coll.collection)
+			err := m.Backup(dir, coll.database, coll.collection)
 
 			result := scheduledJobResult{true, time.Now()}
 
@@ -142,7 +151,7 @@ func (m *backupService) backupScheduled(colls []fullColl, cronExpr string, dbPat
 
 	healthService := newHealthService(db, colls, healthConfig{
 		appSystemCode: "up-mgz",
-		appName: "mongobackup",
+		appName:       "mongobackup",
 	})
 	hc := health.HealthCheck{
 		SystemCode:  healthService.config.appSystemCode,
@@ -159,7 +168,7 @@ func (m *backupService) backupScheduled(colls []fullColl, cronExpr string, dbPat
 	return nil
 }
 
-func (m *backupService) backup(dir, database, collection string) error {
+func (m *mongoBackupService) Backup(dir, database, collection string) error {
 	start := time.Now()
 	log.Printf("backing up %s/%s to %s in %s\n", database, collection, dir, m.s3bucket)
 
@@ -187,10 +196,10 @@ func (m *backupService) backup(dir, database, collection string) error {
 	return err
 }
 
-func (m *backupService) restoreAll(dateDir string, colls []fullColl) error {
+func (m *mongoBackupService) RestoreAll(dateDir string, colls []fullColl) error {
 	for _, coll := range colls {
 		dir := filepath.Join(m.s3dir, dateDir)
-		err := m.restore(dir, coll.database, coll.collection)
+		err := m.Restore(dir, coll.database, coll.collection)
 		if err != nil {
 			return err
 		}
@@ -198,7 +207,7 @@ func (m *backupService) restoreAll(dateDir string, colls []fullColl) error {
 	return nil
 }
 
-func (m *backupService) restore(dir, database, collection string) error {
+func (m *mongoBackupService) Restore(dir, database, collection string) error {
 
 	path := filepath.Join(dir, database, collection+extension)
 
