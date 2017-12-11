@@ -1,29 +1,37 @@
 package main
 
 import (
-	"bytes"
+	"io"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-func TestDumpCollectionTo_Ok(t *testing.T) {
-	mockedMongoLib := new(mockMongoLib)
-	mongoService := newMongoService(mockedMongoLib, nil)
-	stringWriter := bytes.NewBufferString("")
-	mockedMongoSession := new(mockMongoSession)
-	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
-	mockedMongoSession.On("SetPrefetch", 1.0).Return()
-	mockedMongoSession.On("Close").Return()
-	mockedMongoIter := new(mockMongoIter)
-	mockedMongoSession.On("SnapshotIter", "database1", "collection1", nil).Return(mockedMongoIter)
-	mockedMongoIter.On("Next").Times(3).Return([]byte("data"), true)
-	mockedMongoIter.On("Next").Return([]byte{}, false)
-	mockedMongoIter.On("Err").Return(nil)
+func TestBackup_Ok(t *testing.T) {
+	mockedMongoService := new(mockMongoService)
+	// stringWriter := bytes.NewBufferString("")
+	mockedMongoService.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
 
-	err := mongoService.DumpCollectionTo("127.0.0.1:27010,127.0.0.2:27010", "database1", "collection1", stringWriter)
+	backupService := newMongoBackupService(mockedMongoService, "127.0.0.1:27010,127.0.0.2:27010", "s3bucket", "s3dir", "s3domain", "accessKey", "secretKey")
 
-	assert.NoError(t, err, "Error wasn't expected during dump.")
-	assert.Equal(t, "datadatadata", stringWriter.String())
+	err := backupService.Backup("s3dir", "database1", "collection1")
+
+	assert.NoError(t, err, "Error wasn't expected during backup.")
+	// assert.Equal(t, "datadatadata", stringWriter.String())
+}
+
+type mockMongoService struct {
+	mock.Mock
+}
+
+func (m *mockMongoService) DumpCollectionTo(connStr, database, collection string, writer io.Writer) error {
+	args := m.Called(connStr, database, collection, writer)
+	return args.Error(0)
+}
+
+func (m *mockMongoService) RestoreCollectionFrom(connStr, database, collection string, reader io.Reader) error {
+	args := m.Called(connStr, database, collection, reader)
+	return args.Error(0)
 }
