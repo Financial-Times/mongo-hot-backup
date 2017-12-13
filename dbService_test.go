@@ -14,7 +14,7 @@ import (
 
 func TestDumpCollectionTo_Ok(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
-	mongoService := newMongoService(mockedMongoLib, nil)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, nil)
 	stringWriter := bytes.NewBufferString("")
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
@@ -26,7 +26,7 @@ func TestDumpCollectionTo_Ok(t *testing.T) {
 	mockedMongoIter.On("Next").Return([]byte{}, false)
 	mockedMongoIter.On("Err").Return(nil)
 
-	err := mongoService.DumpCollectionTo("127.0.0.1:27010,127.0.0.2:27010", "database1", "collection1", stringWriter)
+	err := mongoService.DumpCollectionTo("database1", "collection1", stringWriter)
 
 	assert.NoError(t, err, "Error wasn't expected during dump.")
 	assert.Equal(t, "datadatadata", stringWriter.String())
@@ -34,11 +34,11 @@ func TestDumpCollectionTo_Ok(t *testing.T) {
 
 func TestDumpCollectionTo_SessionErr(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
-	mongoService := newMongoService(mockedMongoLib, nil)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, nil)
 	stringWriter := bytes.NewBufferString("")
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(&labixSession{}, fmt.Errorf("oops"))
 
-	err := mongoService.DumpCollectionTo("127.0.0.1:27010,127.0.0.2:27010", "database1", "collection1", stringWriter)
+	err := mongoService.DumpCollectionTo("database1", "collection1", stringWriter)
 
 	assert.Error(t, err, "Error was expected during dial.")
 	assert.Equal(t, "oops", err.Error())
@@ -46,7 +46,7 @@ func TestDumpCollectionTo_SessionErr(t *testing.T) {
 
 func TestDumpCollectionTo_WriterErr(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
-	mongoService := newMongoService(mockedMongoLib, nil)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, nil)
 	cappedStringWriter := newCappedBuffer(make([]byte, 0, 4), 11)
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
@@ -57,7 +57,7 @@ func TestDumpCollectionTo_WriterErr(t *testing.T) {
 	mockedMongoIter.On("Next").Return([]byte("data"), true)
 	mockedMongoIter.On("Err").Return(nil)
 
-	err := mongoService.DumpCollectionTo("127.0.0.1:27010,127.0.0.2:27010", "database1", "collection1", cappedStringWriter)
+	err := mongoService.DumpCollectionTo("database1", "collection1", cappedStringWriter)
 
 	assert.Error(t, err, "Error expected during write.")
 	assert.Equal(t, "buffer overflow", err.Error())
@@ -65,7 +65,7 @@ func TestDumpCollectionTo_WriterErr(t *testing.T) {
 
 func TestDumpCollectionTo_IterationErr(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
-	mongoService := newMongoService(mockedMongoLib, nil)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, nil)
 	stringWriter := bytes.NewBufferString("")
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
@@ -77,7 +77,7 @@ func TestDumpCollectionTo_IterationErr(t *testing.T) {
 	mockedMongoIter.On("Next").Return([]byte{}, false)
 	mockedMongoIter.On("Err").Return(fmt.Errorf("iteration error"))
 
-	err := mongoService.DumpCollectionTo("127.0.0.1:27010,127.0.0.2:27010", "database1", "collection1", stringWriter)
+	err := mongoService.DumpCollectionTo("database1", "collection1", stringWriter)
 
 	assert.Error(t, err, "Error expected for iterator.")
 	assert.Equal(t, "datadatadata", stringWriter.String())
@@ -87,7 +87,7 @@ func TestDumpCollectionTo_IterationErr(t *testing.T) {
 func TestRestoreCollectionFrom_Ok(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
 	mockedBsonService := new(mockBsonService)
-	mongoService := newMongoService(mockedMongoLib, mockedBsonService)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, mockedBsonService)
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
 	mockedMongoSession.On("RemoveAll", "database1", "collection1", nil).Return(nil)
@@ -103,7 +103,7 @@ func TestRestoreCollectionFrom_Ok(t *testing.T) {
 	})
 	mockedMongoBulk.On("Run").Return(nil)
 
-	err := mongoService.RestoreCollectionFrom("127.0.0.1:27010,127.0.0.2:27010", "database1", "collection1", strings.NewReader("nothing"))
+	err := mongoService.RestoreCollectionFrom("database1", "collection1", strings.NewReader("nothing"))
 
 	assert.NoError(t, err, "Error wasn't expected during restore.")
 	assert.Equal(t, []byte("bsonbsonbson"), insertedData)
@@ -112,11 +112,11 @@ func TestRestoreCollectionFrom_Ok(t *testing.T) {
 func TestRestoreCollectionFrom_DialErr(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
 	mockedBsonService := new(mockBsonService)
-	mongoService := newMongoService(mockedMongoLib, mockedBsonService)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, mockedBsonService)
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, fmt.Errorf("couldn't dial"))
 
-	err := mongoService.RestoreCollectionFrom("127.0.0.1:27010,127.0.0.2:27010", "database1", "collection1", strings.NewReader("nothing"))
+	err := mongoService.RestoreCollectionFrom("database1", "collection1", strings.NewReader("nothing"))
 
 	assert.Error(t, err, "Error was expected during restore.")
 	assert.Equal(t, "couldn't dial", err.Error())
@@ -125,13 +125,13 @@ func TestRestoreCollectionFrom_DialErr(t *testing.T) {
 func TestRestoreCollectionFrom_ErrOnClean(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
 	mockedBsonService := new(mockBsonService)
-	mongoService := newMongoService(mockedMongoLib, mockedBsonService)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, mockedBsonService)
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
 	mockedMongoSession.On("RemoveAll", "database1", "collection1", nil).Return(fmt.Errorf("couldn't clean"))
 	mockedMongoSession.On("Close").Return()
 
-	err := mongoService.RestoreCollectionFrom("127.0.0.1:27010,127.0.0.2:27010", "database1", "collection1", strings.NewReader("nothing"))
+	err := mongoService.RestoreCollectionFrom("database1", "collection1", strings.NewReader("nothing"))
 
 	assert.Error(t, err, "Error was expected during restore.")
 	assert.Equal(t, "couldn't clean", err.Error())
@@ -140,7 +140,7 @@ func TestRestoreCollectionFrom_ErrOnClean(t *testing.T) {
 func TestRestoreCollectionFrom_ErrOnRead(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
 	mockedBsonService := new(mockBsonService)
-	mongoService := newMongoService(mockedMongoLib, mockedBsonService)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, mockedBsonService)
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
 	mockedMongoSession.On("RemoveAll", "database1", "collection1", nil).Return(nil)
@@ -153,7 +153,7 @@ func TestRestoreCollectionFrom_ErrOnRead(t *testing.T) {
 	mockedMongoBulk.On("Insert", []byte("bson")).Return()
 	mockedMongoBulk.On("Run").Return(nil)
 
-	err := mongoService.RestoreCollectionFrom("127.0.0.1:27010,127.0.0.2:27010", "database1", "collection1", strings.NewReader("nothing"))
+	err := mongoService.RestoreCollectionFrom("database1", "collection1", strings.NewReader("nothing"))
 
 	assert.Error(t, err, "Error was expected during restore.")
 	assert.Equal(t, "error on read from unit test", err.Error())
@@ -162,7 +162,7 @@ func TestRestoreCollectionFrom_ErrOnRead(t *testing.T) {
 func TestRestoreCollectionFrom_ErrorOnWrite(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
 	mockedBsonService := new(mockBsonService)
-	mongoService := newMongoService(mockedMongoLib, mockedBsonService)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, mockedBsonService)
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
 	mockedMongoSession.On("RemoveAll", "database1", "collection1", nil).Return(nil)
@@ -175,7 +175,7 @@ func TestRestoreCollectionFrom_ErrorOnWrite(t *testing.T) {
 	mockedMongoBulk.On("Insert", []byte("bson")).Return()
 	mockedMongoBulk.On("Run").Return(fmt.Errorf("error writing to db from test"))
 
-	err := mongoService.RestoreCollectionFrom("127.0.0.1:27010,127.0.0.2:27010", "database1", "collection1", strings.NewReader("nothing"))
+	err := mongoService.RestoreCollectionFrom("database1", "collection1", strings.NewReader("nothing"))
 
 	assert.Error(t, err, "error writing to db from test")
 }
@@ -183,7 +183,7 @@ func TestRestoreCollectionFrom_ErrorOnWrite(t *testing.T) {
 func TestRestoreCollectionFrom_ErrorAfterOneBulkBatching(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
 	mockedBsonService := new(mockBsonService)
-	mongoService := newMongoService(mockedMongoLib, mockedBsonService)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, mockedBsonService)
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
 	mockedMongoSession.On("RemoveAll", "database1", "collection1", nil).Return(nil)
@@ -203,7 +203,7 @@ func TestRestoreCollectionFrom_ErrorAfterOneBulkBatching(t *testing.T) {
 	mockedMongoBulk.On("Run").Times(1).Return(nil)
 	mockedMongoBulk.On("Run").Return(fmt.Errorf("error writing to db from test"))
 
-	err := mongoService.RestoreCollectionFrom("127.0.0.1:27010,127.0.0.2:27010", "database1", "collection1", strings.NewReader("nothing"))
+	err := mongoService.RestoreCollectionFrom("database1", "collection1", strings.NewReader("nothing"))
 
 	assert.Error(t, err, "error writing to db from test")
 }

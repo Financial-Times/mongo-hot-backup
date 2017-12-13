@@ -79,7 +79,6 @@ type cappedBuffer struct {
 
 func (b *cappedBuffer) Write(p []byte) (n int, err error) {
 	if len(p)+b.mybuf.Len() > b.cap {
-		fmt.Printf(b.mybuf.String())
 		return len(p), fmt.Errorf("buffer overflow")
 	}
 	b.mybuf.Write(p)

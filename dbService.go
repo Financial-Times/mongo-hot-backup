@@ -34,7 +34,7 @@ func (m *mongoService) DumpCollectionTo(database, collection string, writer io.W
 	defer session.Close()
 
 	start := time.Now()
-	log.Printf("backing up %s/%s\n", database, collection)
+	log.Infof("backing up %s/%s", database, collection)
 
 	iter := session.SnapshotIter(database, collection, nil)
 	for {
@@ -48,7 +48,7 @@ func (m *mongoService) DumpCollectionTo(database, collection string, writer io.W
 		}
 	}
 
-	log.Printf("backing up finished for %s/%s. duration=%v\n", database, collection, time.Now().Sub(start).Truncate(1*time.Second))
+	log.Infof("backing up finished for %s/%s. duration=%v", database, collection, time.Now().Sub(start).Truncate(1*time.Second))
 	return iter.Err()
 }
 
@@ -65,7 +65,7 @@ func (m *mongoService) RestoreCollectionFrom(database, collection string, reader
 	}
 
 	start := time.Now()
-	log.Printf("starting restore of %s/%s\n", database, collection)
+	log.Infof("starting restore of %s/%s", database, collection)
 
 	bulk := session.Bulk(database, collection)
 
@@ -110,15 +110,15 @@ func (m *mongoService) RestoreCollectionFrom(database, collection string, reader
 		batchBytes += len(next)
 	}
 	err = bulk.Run()
-	log.Printf("finished restore of %s/%s. Duration: %v\n", database, collection, time.Since(start))
+	log.Infof("finished restore of %s/%s. Duration: %v", database, collection, time.Since(start))
 	return err
 }
 
 func (m *mongoService) clearCollection(session mongoSession, database, collection string) error {
 	start := time.Now()
-	log.Printf("clearing collection %s/%s\n", database, collection)
+	log.Infof("clearing collection %s/%s", database, collection)
 	err := session.RemoveAll(database, collection, nil)
-	log.Printf("finished clearing collection %s/%s. Duration : %v\n", database, collection, time.Now().Sub(start))
+	log.Infof("finished clearing collection %s/%s. Duration : %v", database, collection, time.Now().Sub(start))
 
 	return err
 }
