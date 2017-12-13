@@ -11,29 +11,32 @@ import (
 )
 
 type dbService interface {
-	DumpCollectionTo(connStr, database, collection string, writer io.Writer) error
-	RestoreCollectionFrom(connStr, database, collection string, reader io.Reader) error
+	DumpCollectionTo(database, collection string, writer io.Writer) error
+	RestoreCollectionFrom(database, collection string, reader io.Reader) error
 }
 
 type mongoService struct {
-	mgoLib      mongoLib
-	bsonService bsonService
+	connectionString string
+	mgoLib           mongoLib
+	bsonService      bsonService
 }
 
-func newMongoService(mgoLib mongoLib, bsonService bsonService) *mongoService {
-	return &mongoService{mgoLib: mgoLib, bsonService: bsonService}
+func newMongoService(connectionString string, mgoLib mongoLib, bsonService bsonService) *mongoService {
+	return &mongoService{connectionString: connectionString, mgoLib: mgoLib, bsonService: bsonService}
 }
 
-func (m *mongoService) DumpCollectionTo(connStr, database, collection string, writer io.Writer) error {
-	session, err := m.mgoLib.DialWithTimeout(connStr, 0)
+func (m *mongoService) DumpCollectionTo(database, collection string, writer io.Writer) error {
+	session, err := m.mgoLib.DialWithTimeout(m.connectionString, 0)
 	if err != nil {
 		return err
 	}
 	session.SetPrefetch(1.0)
 	defer session.Close()
 
-	iter := session.SnapshotIter(database, collection, nil)
+	start := time.Now()
+	log.Printf("backing up %s/%s\n", database, collection)
 
+	iter := session.SnapshotIter(database, collection, nil)
 	for {
 		result, hasNext := iter.Next()
 		if !hasNext {
@@ -45,11 +48,12 @@ func (m *mongoService) DumpCollectionTo(connStr, database, collection string, wr
 		}
 	}
 
+	log.Printf("backing up finished for %s/%s. duration=%v\n", database, collection, time.Now().Sub(start).Truncate(1*time.Second))
 	return iter.Err()
 }
 
-func (m *mongoService) RestoreCollectionFrom(connStr, database, collection string, reader io.Reader) error {
-	session, err := m.mgoLib.DialWithTimeout(connStr, 0)
+func (m *mongoService) RestoreCollectionFrom(database, collection string, reader io.Reader) error {
+	session, err := m.mgoLib.DialWithTimeout(m.connectionString, 0)
 	if err != nil {
 		return err
 	}

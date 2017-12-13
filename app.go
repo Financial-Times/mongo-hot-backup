@@ -11,7 +11,6 @@ import (
 )
 
 const (
-	extension  = ".bson.snappy"
 	dateFormat = "2006-01-02T15-04-05"
 )
 
@@ -88,23 +87,44 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
-			mongoService := newMongoService(&labixMongo{}, &defaultBsonService{})
-			backupService := newMongoBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
-			if err := backupService.BackupScheduled(parsedColls, *cronExpr, *dbPath, *run); err != nil {
-				log.Fatalf("backup failed : %v\n", err)
+			mongoService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{})
+			statusKeeper, err := newBoltStatusKeeper(*dbPath)
+			if err != nil {
+				log.Fatalf("failed setting up to read or write scheduled backup status results: %v\n", err)
 			}
+			storageService := newS3StorageService(*s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
+			backupService := newMongoBackupService(mongoService, storageService, statusKeeper)
+			scheduler := newCronScheduler(backupService, statusKeeper)
+			healthService := newHealthService(statusKeeper, parsedColls, healthConfig{
+				appSystemCode: "up-mgz",
+				appName:       "mongobackup",
+			})
+			httpService := newScheduleHTTPService(scheduler, healthService)
+			httpService.ScheduleAndServe(parsedColls, *cronExpr, *run)
 		}
 	})
 
 	app.Command("backup", "backup a set of mongodb collections", func(cmd *cli.Cmd) {
+		dbPath := cmd.String(cli.StringOpt{
+			Name:   "dbPath",
+			Desc:   "Path to store boltdb file",
+			EnvVar: "DBPATH",
+			Value:  "/var/data/mongobackup/state.db",
+		})
+
 		cmd.Action = func() {
 			parsedColls, err := parseCollections(*colls)
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
-			mongoService := newMongoService(&labixMongo{}, &defaultBsonService{})
-			backupService := newMongoBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
-			if err := backupService.BackupAll(parsedColls); err != nil {
+			mongoService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{})
+			statusKeeper, err := newBoltStatusKeeper(*dbPath)
+			if err != nil {
+				log.Fatalf("failed setting up to read or write scheduled backup status results: %v\n", err)
+			}
+			storageService := newS3StorageService(*s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
+			backupService := newMongoBackupService(mongoService, storageService, statusKeeper)
+			if err := backupService.Backup(parsedColls); err != nil {
 				log.Fatalf("backup failed : %v\n", err)
 			}
 		}
@@ -121,9 +141,13 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
-			mongoService := newMongoService(&labixMongo{}, &defaultBsonService{})
-			backupService := newMongoBackupService(mongoService, *connStr, *s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
-			if err := backupService.RestoreAll(*dateDir, parsedColls); err != nil {
+			mongoService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{})
+			if err != nil {
+				log.Fatalf("failed setting up to read or write scheduled backup status results: %v\n", err)
+			}
+			storageService := newS3StorageService(*s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
+			backupService := newMongoBackupService(mongoService, storageService, &boltStatusKeeper{})
+			if err := backupService.Restore(*dateDir, parsedColls); err != nil {
 				log.Fatalf("restore failed : %v\n", err)
 			}
 		}
