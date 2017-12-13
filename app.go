@@ -87,13 +87,13 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
-			mongoService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{})
+			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{})
 			statusKeeper, err := newBoltStatusKeeper(*dbPath)
 			if err != nil {
 				log.Fatalf("failed setting up to read or write scheduled backup status results: %v\n", err)
 			}
 			storageService := newS3StorageService(*s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
-			backupService := newMongoBackupService(mongoService, storageService, statusKeeper)
+			backupService := newMongoBackupService(dbService, storageService, statusKeeper)
 			scheduler := newCronScheduler(backupService, statusKeeper)
 			healthService := newHealthService(statusKeeper, parsedColls, healthConfig{
 				appSystemCode: "up-mgz",
@@ -117,13 +117,13 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
-			mongoService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{})
+			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{})
 			statusKeeper, err := newBoltStatusKeeper(*dbPath)
 			if err != nil {
 				log.Fatalf("failed setting up to read or write scheduled backup status results: %v\n", err)
 			}
 			storageService := newS3StorageService(*s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
-			backupService := newMongoBackupService(mongoService, storageService, statusKeeper)
+			backupService := newMongoBackupService(dbService, storageService, statusKeeper)
 			if err := backupService.Backup(parsedColls); err != nil {
 				log.Fatalf("backup failed : %v\n", err)
 			}
@@ -141,12 +141,12 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
-			mongoService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{})
+			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{})
 			if err != nil {
 				log.Fatalf("failed setting up to read or write scheduled backup status results: %v\n", err)
 			}
 			storageService := newS3StorageService(*s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
-			backupService := newMongoBackupService(mongoService, storageService, &boltStatusKeeper{})
+			backupService := newMongoBackupService(dbService, storageService, &boltStatusKeeper{})
 			if err := backupService.Restore(*dateDir, parsedColls); err != nil {
 				log.Fatalf("restore failed : %v\n", err)
 			}
