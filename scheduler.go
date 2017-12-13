@@ -6,7 +6,7 @@ import (
 )
 
 type scheduler interface {
-	SheduleBackups(colls []fullColl, cronExpr string, runAtStart bool)
+	SheduleBackups(colls []dbColl, cronExpr string, runAtStart bool)
 }
 
 type cronScheduler struct {
@@ -20,10 +20,10 @@ func newCronScheduler(backupService backupService, statusKeeper statusKeeper) *c
 
 type scheduledJob struct {
 	eID   cron.EntryID
-	colls []fullColl
+	colls []dbColl
 }
 
-func (s *cronScheduler) SheduleBackups(colls []fullColl, cronExpr string, runAtStart bool) {
+func (s *cronScheduler) SheduleBackups(colls []dbColl, cronExpr string, runAtStart bool) {
 	if runAtStart {
 		s.backupService.Backup(colls)
 	}

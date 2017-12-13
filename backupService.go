@@ -6,8 +6,8 @@ import (
 )
 
 type backupService interface {
-	Backup(colls []fullColl) error
-	Restore(dateDir string, colls []fullColl) error
+	Backup(colls []dbColl) error
+	Restore(dateDir string, colls []dbColl) error
 }
 
 type mongoBackupService struct {
@@ -27,10 +27,10 @@ func newMongoBackupService(dbService dbService, storageService storageService, s
 type backupResult struct {
 	Success    bool
 	Timestamp  time.Time
-	Collection fullColl
+	Collection dbColl
 }
 
-func (m *mongoBackupService) Backup(colls []fullColl) error {
+func (m *mongoBackupService) Backup(colls []dbColl) error {
 	date := formattedNow()
 	for _, coll := range colls {
 		err := m.backup(date, coll)
@@ -41,7 +41,7 @@ func (m *mongoBackupService) Backup(colls []fullColl) error {
 	return nil
 }
 
-func (m *mongoBackupService) backup(date string, coll fullColl) error {
+func (m *mongoBackupService) backup(date string, coll dbColl) error {
 	w, err := m.storageService.Writer(date, coll.database, coll.collection)
 	if err != nil {
 		return err
@@ -63,7 +63,7 @@ func (m *mongoBackupService) backup(date string, coll fullColl) error {
 	return nil
 }
 
-func (m *mongoBackupService) Restore(date string, colls []fullColl) error {
+func (m *mongoBackupService) Restore(date string, colls []dbColl) error {
 	for _, coll := range colls {
 		err := m.restore(date, coll)
 		if err != nil {
@@ -73,7 +73,7 @@ func (m *mongoBackupService) Restore(date string, colls []fullColl) error {
 	return nil
 }
 
-func (m *mongoBackupService) restore(date string, coll fullColl) error {
+func (m *mongoBackupService) restore(date string, coll dbColl) error {
 	r, err := m.storageService.Reader(date, coll.database, coll.collection)
 	defer r.Close()
 	if err != nil {

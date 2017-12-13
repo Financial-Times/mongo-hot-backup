@@ -159,19 +159,19 @@ func main() {
 	}
 }
 
-type fullColl struct {
+type dbColl struct {
 	database   string
 	collection string
 }
 
-func parseCollections(colls string) ([]fullColl, error) {
-	var cn []fullColl
+func parseCollections(colls string) ([]dbColl, error) {
+	var cn []dbColl
 	for _, coll := range strings.Split(colls, ",") {
 		c := strings.Split(coll, "/")
 		if len(c) != 2 {
 			return nil, fmt.Errorf("failed to parse connections string: %s\n", colls)
 		}
-		cn = append(cn, fullColl{c[0], c[1]})
+		cn = append(cn, dbColl{c[0], c[1]})
 	}
 
 	return cn, nil

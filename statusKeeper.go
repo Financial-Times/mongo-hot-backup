@@ -11,7 +11,7 @@ import (
 
 type statusKeeper interface {
 	Save(result backupResult) error
-	Get(coll fullColl) (backupResult, error)
+	Get(coll dbColl) (backupResult, error)
 }
 
 type boltStatusKeeper struct {
@@ -52,7 +52,7 @@ func (s *boltStatusKeeper) Save(result backupResult) error {
 	})
 }
 
-func (s *boltStatusKeeper) Get(coll fullColl) (backupResult, error) {
+func (s *boltStatusKeeper) Get(coll dbColl) (backupResult, error) {
 	var result backupResult
 	err := s.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("Results"))

@@ -19,7 +19,7 @@ type healthConfig struct {
 	appName       string
 }
 
-func newHealthService(statusKeeper statusKeeper, colls []fullColl, config healthConfig) *healthService {
+func newHealthService(statusKeeper statusKeeper, colls []dbColl, config healthConfig) *healthService {
 	hService := &healthService{
 		statusKeeper: statusKeeper,
 		config:       config,
@@ -31,7 +31,7 @@ func newHealthService(statusKeeper statusKeeper, colls []fullColl, config health
 	return hService
 }
 
-func (h *healthService) backupImageCheck(coll fullColl) health.Check {
+func (h *healthService) backupImageCheck(coll dbColl) health.Check {
 	return health.Check{
 		BusinessImpact:   "Restoring the database in case of an issue will have to be done from older backups. It will take longer to restore systems to a clean state.",
 		Name:             fmt.Sprintf("%s/%s", coll.database, coll.collection),
@@ -42,7 +42,7 @@ func (h *healthService) backupImageCheck(coll fullColl) health.Check {
 	}
 }
 
-func (h *healthService) verifyExistingBackupImage(coll fullColl) (string, error) {
+func (h *healthService) verifyExistingBackupImage(coll dbColl) (string, error) {
 	result, err := h.statusKeeper.Get(coll)
 	if err != nil {
 		return err.Error(), err

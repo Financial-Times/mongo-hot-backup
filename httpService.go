@@ -9,7 +9,7 @@ import (
 )
 
 type httpService interface {
-	ScheduleAndServe(colls []fullColl, cronExpr string, runAtStart bool)
+	ScheduleAndServe(colls []dbColl, cronExpr string, runAtStart bool)
 }
 
 type scheduleHTTPService struct {
@@ -21,7 +21,7 @@ func newScheduleHTTPService(scheduler scheduler, healthService *healthService) *
 	return &scheduleHTTPService{scheduler, healthService}
 }
 
-func (h *scheduleHTTPService) ScheduleAndServe(colls []fullColl, cronExpr string, runAtStart bool) {
+func (h *scheduleHTTPService) ScheduleAndServe(colls []dbColl, cronExpr string, runAtStart bool) {
 	h.scheduler.SheduleBackups(colls, cronExpr, runAtStart)
 
 	hc := health.HealthCheck{
