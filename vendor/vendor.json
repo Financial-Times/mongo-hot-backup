@@ -25,6 +25,12 @@
 			"versionExact": "v1.3.1"
 		},
 		{
+			"checksumSHA1": "mrz/kicZiUaHxkyfvC/DyQcr8Do=",
+			"path": "github.com/davecgh/go-spew/spew",
+			"revision": "ecdeabc65495df2dec95d7c4a4c3e021903035e5",
+			"revisionTime": "2017-10-02T20:02:53Z"
+		},
+		{
 			"checksumSHA1": "g/V4qrXjUGG9B+e3hB+4NAYJ5Gs=",
 			"path": "github.com/gorilla/context",
 			"revision": "08b5f424b9271eedf6f9f0ce86cb9396ed337a42",
@@ -50,10 +56,46 @@
 			"revisionTime": "2017-05-28T13:23:59Z"
 		},
 		{
+			"checksumSHA1": "LuFv4/jlrmFNnDb/5SCSEPAM9vU=",
+			"path": "github.com/pmezard/go-difflib/difflib",
+			"revision": "792786c7400a136282c1664665ae0a8db921c6c2",
+			"revisionTime": "2016-01-10T10:55:54Z"
+		},
+		{
 			"checksumSHA1": "X1OS3xGRiYiQ+xyMLdLCVTkDlBg=",
 			"path": "github.com/rlmcpherson/s3gof3r",
 			"revision": "864ae0bf7cf2e20c0002b7ea17f4d84fec1abc14",
 			"revisionTime": "2017-02-10T00:40:45Z"
+		},
+		{
+			"checksumSHA1": "K0crHygPTP42i1nLKWphSlvOQJw=",
+			"path": "github.com/stretchr/objx",
+			"revision": "1a9d0bb9f541897e62256577b352fdbc1fb4fd94",
+			"revisionTime": "2015-09-28T12:21:52Z"
+		},
+		{
+			"checksumSHA1": "mGbTYZ8dHVTiPTTJu3ktp+84pPI=",
+			"path": "github.com/stretchr/testify/assert",
+			"revision": "2aa2c176b9dab406a6970f6a55f513e8a8c8b18f",
+			"revisionTime": "2017-08-14T20:04:35Z"
+		},
+		{
+			"checksumSHA1": "hs0IfAV4wNExbAXc0aUU9V2SuFc=",
+			"path": "github.com/stretchr/testify/mock",
+			"revision": "2aa2c176b9dab406a6970f6a55f513e8a8c8b18f",
+			"revisionTime": "2017-08-14T20:04:35Z"
+		},
+		{
+			"checksumSHA1": "5Yb2z6UO+Arm/TEd+OEtdnwOt1A=",
+			"path": "golang.org/x/crypto/ssh/terminal",
+			"revision": "6a293f2d4b14b8e6d3f0539e383f6d0d30fce3fd",
+			"revisionTime": "2017-09-25T11:22:06Z"
+		},
+		{
+			"checksumSHA1": "0pTcHZ43GApI5Lp33cN9RoWzdNk=",
+			"path": "golang.org/x/sys/unix",
+			"revision": "ab9e364efd8b52800ff7ee48a9ffba4e0ed78dfb",
+			"revisionTime": "2017-08-29T14:47:16Z"
 		},
 		{
 			"checksumSHA1": "vGfePfr0+weQUeTM/71mu+LCFuE=",
@@ -101,19 +143,7 @@
 			"path": "gopkg.in/robfig/cron.v2",
 			"revision": "be2e0b0deed5a68ffee390b4583a13aff8321535",
 			"revisionTime": "2015-01-07T22:02:07Z"
-		},
-		{
-		    "checksumSHA1": "0pTcHZ43GApI5Lp33cN9RoWzdNk=",
-		    "path": "golang.org/x/sys/unix",
-		    "revision": "ab9e364efd8b52800ff7ee48a9ffba4e0ed78dfb",
-			"revisionTime": "2017-08-29T14:47:16Z"
-		},
-		{
-		    "checksumSHA1": "5Yb2z6UO+Arm/TEd+OEtdnwOt1A=",
-		    "path": "golang.org/x/crypto/ssh/terminal",
-		    "revision": "6a293f2d4b14b8e6d3f0539e383f6d0d30fce3fd",
-		    "revisionTime": "2017-09-25T11:22:06Z"
-	    }
+		}
 	],
 	"rootPath": "github.com/Financial-Times/mongo-hot-backup"
 }
