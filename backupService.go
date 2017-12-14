@@ -10,6 +10,11 @@ type backupService interface {
 	Restore(dateDir string, colls []dbColl) error
 }
 
+type dbColl struct {
+	database   string
+	collection string
+}
+
 type mongoBackupService struct {
 	dbService      dbService
 	storageService storageService
@@ -51,7 +56,7 @@ func (m *mongoBackupService) backup(date string, coll dbColl) error {
 	if err := m.dbService.DumpCollectionTo(coll.database, coll.collection, w); err != nil {
 		result := backupResult{false, time.Now(), coll}
 		m.statusKeeper.Save(result)
-		return fmt.Errorf("dumping failed for %s/%s %v", coll.database, coll.collection, err)
+		return fmt.Errorf("dumping failed for %s/%s: %v", coll.database, coll.collection, err)
 	}
 
 	if err := w.Close(); err != nil {
@@ -59,8 +64,7 @@ func (m *mongoBackupService) backup(date string, coll dbColl) error {
 	}
 
 	result := backupResult{true, time.Now(), coll}
-	m.statusKeeper.Save(result)
-	return nil
+	return m.statusKeeper.Save(result)
 }
 
 func (m *mongoBackupService) Restore(date string, colls []dbColl) error {

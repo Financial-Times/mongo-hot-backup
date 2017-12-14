@@ -159,11 +159,6 @@ func main() {
 	}
 }
 
-type dbColl struct {
-	database   string
-	collection string
-}
-
 func parseCollections(colls string) ([]dbColl, error) {
 	var cn []dbColl
 	for _, coll := range strings.Split(colls, ",") {
