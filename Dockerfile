@@ -1,4 +1,4 @@
-FROM alpine:3.5
+FROM golang:1.8-alpine
 ADD . /source/
 RUN apk add --update bash \
   && apk --update add git go libc-dev ca-certificates \
