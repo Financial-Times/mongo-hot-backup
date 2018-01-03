@@ -116,9 +116,9 @@ type mockStorageServie struct {
 	mock.Mock
 }
 
-func (m *mockStorageServie) Reader(date, database, collection string) (*snappyReadCloser, error) {
+func (m *mockStorageServie) Reader(date, database, collection string) (io.ReadCloser, error) {
 	args := m.Called(date, database, collection)
-	return args.Get(0).(*snappyReadCloser), args.Error(1)
+	return args.Get(0).(io.ReadCloser), args.Error(1)
 }
 
 func (m *mockStorageServie) Writer(date, database, collection string) (io.WriteCloser, error) {
@@ -150,6 +150,20 @@ func (m *mockWriteCloser) Write(b []byte) (int, error) {
 }
 
 func (m *mockWriteCloser) Close() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
+type mockReadCloser struct {
+	mock.Mock
+}
+
+func (m *mockReadCloser) Read(p []byte) (int, error) {
+	args := m.Called(p)
+	return args.Int(0), args.Error(1)
+}
+
+func (m *mockReadCloser) Close() error {
 	args := m.Called()
 	return args.Error(0)
 }

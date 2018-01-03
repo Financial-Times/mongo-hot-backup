@@ -86,23 +86,16 @@ func TestBackup_ErrorOnSavingStatus(t *testing.T) {
 	assert.Equal(t, "Coulnd't save status of backup", err.Error())
 }
 
-// func TestRestore_OK(t *testing.T) {
-// 	mockedStorageService := new(mockStorageServie)
-// 	mockedReader := new(mockReader)
-// 	mockedReader.On("Close").Return(nil)
-// 	mockedStorageService.On("Reader", mock.MatchedBy(func(date string) bool { return true }), "database1", "collection1").Return(mockedWriter, nil)
-// 	mockedMongoService := new(mockMongoService)
-// 	mockedMongoService.On("DumpCollectionTo", "database1", "collection1", mockedWriter).Return(nil)
-// 	mockedStatusKeeper := new(mockStatusKeeper)
-// 	mockedStatusKeeper.On("Save",
-// 		mock.MatchedBy(func(result backupResult) bool {
-// 			return result.Success &&
-// 				result.Collection.collection == "collection1" &&
-// 				result.Collection.database == "database1"
-// 		})).Return(nil)
-// 	backupService := newMongoBackupService(mockedMongoService, mockedStorageService, mockedStatusKeeper)
+func TestRestore_OK(t *testing.T) {
+	mockedStorageService := new(mockStorageServie)
+	mockedReadCloser := new(mockReadCloser)
+	mockedReadCloser.On("Close").Return(nil)
+	mockedStorageService.On("Reader", "2017-09-04T12-40-36", "database1", "collection1").Return(mockedReadCloser, nil)
+	mockedMongoService := new(mockMongoService)
+	mockedMongoService.On("RestoreCollectionFrom", "database1", "collection1", mockedReadCloser).Return(nil)
+	backupService := newMongoBackupService(mockedMongoService, mockedStorageService, nil)
 
-// 	err := backupService.Restore(dateN, []dbColl{dbColl{"database1", "collection1"}})
+	err := backupService.Restore("2017-09-04T12-40-36", []dbColl{dbColl{"database1", "collection1"}})
 
-// 	assert.NoError(t, err, "Error wasn't expected during backup.")
-// }
+	assert.NoError(t, err, "Error wasn't expected during backup.")
+}

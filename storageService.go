@@ -14,7 +14,7 @@ const extension = ".bson.snappy"
 
 type storageService interface {
 	Writer(date, database, collection string) (io.WriteCloser, error)
-	Reader(date, database, collection string) (*snappyReadCloser, error)
+	Reader(date, database, collection string) (io.ReadCloser, error)
 }
 
 type s3StorageService struct {
@@ -48,7 +48,7 @@ func (s *s3StorageService) Writer(date, database, collection string) (io.WriteCl
 	return snappy.NewBufferedWriter(w), nil
 }
 
-func (s *s3StorageService) Reader(date, database, collection string) (*snappyReadCloser, error) {
+func (s *s3StorageService) Reader(date, database, collection string) (io.ReadCloser, error) {
 	path := filepath.Join(s.s3dir, date, database, collection+extension)
 
 	rc, _, err := s.s3.Bucket(s.s3bucket).GetReader(path, nil)
