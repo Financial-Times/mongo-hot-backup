@@ -48,7 +48,7 @@ func (m *mongoService) DumpCollectionTo(database, collection string, writer io.W
 		}
 	}
 
-	log.Infof("backing up finished for %s/%s. duration=%v", database, collection, time.Now().Sub(start).Truncate(1*time.Second))
+	log.Infof("backing up finished for %s/%s. duration=%v", database, collection, time.Now().Sub(start))
 	return iter.Err()
 }
 
