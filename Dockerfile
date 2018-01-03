@@ -1,4 +1,4 @@
-FROM golang:1.8-alpine
+FROM golang:1.9.2-alpine
 ADD . /source/
 RUN apk add --update bash \
   && apk --update add git go libc-dev ca-certificates \
