@@ -99,3 +99,30 @@ func TestRestore_OK(t *testing.T) {
 
 	assert.NoError(t, err, "Error wasn't expected during backup.")
 }
+
+func TestRestore_ErrorOnReadingFromStorage(t *testing.T) {
+	mockedStorageService := new(mockStorageServie)
+	mockedReadCloser := new(mockReadCloser)
+	mockedStorageService.On("Reader", "2017-09-04T12-40-36", "database1", "collection1").Return(mockedReadCloser, fmt.Errorf("Error getting reader to access S3. Test"))
+	mockedMongoService := new(mockMongoService)
+	mockedMongoService.On("RestoreCollectionFrom", "database1", "collection1", mockedReadCloser).Return(nil)
+	backupService := newMongoBackupService(mockedMongoService, mockedStorageService, nil)
+
+	err := backupService.Restore("2017-09-04T12-40-36", []dbColl{dbColl{"database1", "collection1"}})
+
+	assert.Error(t, err, "Error getting reader to access S3. Test")
+}
+
+func TestRestore_ErrorOnRestore(t *testing.T) {
+	mockedStorageService := new(mockStorageServie)
+	mockedReadCloser := new(mockReadCloser)
+	mockedReadCloser.On("Close").Return(nil)
+	mockedStorageService.On("Reader", "2017-09-04T12-40-36", "database1", "collection1").Return(mockedReadCloser, nil)
+	mockedMongoService := new(mockMongoService)
+	mockedMongoService.On("RestoreCollectionFrom", "database1", "collection1", mockedReadCloser).Return(fmt.Errorf("Error while restoring. Test"))
+	backupService := newMongoBackupService(mockedMongoService, mockedStorageService, nil)
+
+	err := backupService.Restore("2017-09-04T12-40-36", []dbColl{dbColl{"database1", "collection1"}})
+
+	assert.Error(t, err, "Error while restoring. Test")
+}

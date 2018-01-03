@@ -79,10 +79,10 @@ func (m *mongoBackupService) Restore(date string, colls []dbColl) error {
 
 func (m *mongoBackupService) restore(date string, coll dbColl) error {
 	r, err := m.storageService.Reader(date, coll.database, coll.collection)
-	defer r.Close()
 	if err != nil {
 		return err
 	}
+	defer r.Close()
 	if err := m.dbService.RestoreCollectionFrom(coll.database, coll.collection, r); err != nil {
 		return err
 	}
