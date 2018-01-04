@@ -12,6 +12,7 @@ import (
 type statusKeeper interface {
 	Save(result backupResult) error
 	Get(coll dbColl) (backupResult, error)
+	Close() error
 }
 
 type boltStatusKeeper struct {
@@ -28,7 +29,6 @@ func newBoltStatusKeeper(dbPath string) (*boltStatusKeeper, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer db.Close()
 
 	err = db.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte("Results"))
@@ -66,4 +66,8 @@ func (s *boltStatusKeeper) Get(coll dbColl) (backupResult, error) {
 		return nil
 	})
 	return result, err
+}
+
+func (s *boltStatusKeeper) Close() error {
+	return s.db.Close()
 }

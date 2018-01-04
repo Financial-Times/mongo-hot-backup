@@ -136,6 +136,11 @@ func (m *mockStatusKeeper) Get(coll dbColl) (backupResult, error) {
 	return args.Get(0).(backupResult), args.Error(1)
 }
 
+func (m *mockStatusKeeper) Close() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
 type mockWriteCloser struct {
 	mock.Mock
 }

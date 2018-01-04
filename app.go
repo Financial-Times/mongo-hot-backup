@@ -105,6 +105,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("failed setting up to read or write scheduled backup status results: %v\n", err)
 			}
+			defer statusKeeper.Close()
 			storageService := newS3StorageService(*s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
 			backupService := newMongoBackupService(dbService, storageService, statusKeeper)
 			scheduler := newCronScheduler(backupService, statusKeeper)
@@ -135,6 +136,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("failed setting up to read or write scheduled backup status results: %v\n", err)
 			}
+			defer statusKeeper.Close()
 			storageService := newS3StorageService(*s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
 			backupService := newMongoBackupService(dbService, storageService, statusKeeper)
 			if err := backupService.Backup(parsedColls); err != nil {
