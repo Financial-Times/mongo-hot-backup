@@ -101,7 +101,7 @@ func main() {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
 			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{}, time.Duration(*mongoTimeout)*time.Second, time.Duration(*rateLimit)*time.Millisecond)
-			statusKeeper := newBoltStatusKeeper(*dbPath)
+			statusKeeper, err := newBoltStatusKeeper(*dbPath)
 			if err != nil {
 				log.Fatalf("failed setting up to read or write scheduled backup status results: %v\n", err)
 			}
@@ -131,7 +131,7 @@ func main() {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
 			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{}, time.Duration(*mongoTimeout)*time.Second, time.Duration(*rateLimit)*time.Millisecond)
-			statusKeeper := newBoltStatusKeeper(*dbPath)
+			statusKeeper, err := newBoltStatusKeeper(*dbPath)
 			if err != nil {
 				log.Fatalf("failed setting up to read or write scheduled backup status results: %v\n", err)
 			}
