@@ -75,6 +75,8 @@ spec:
           value: /{{ .Values.service.volumeMountPath }}/state.db
         - name: RUN
           value: "false"
+        - name: RATE_LIMIT
+          value: 500
         ports:
         - containerPort: 8080
         volumeMounts:

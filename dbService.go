@@ -20,14 +20,16 @@ type mongoService struct {
 	mgoLib           mongoLib
 	bsonService      bsonService
 	mongoTimeout     time.Duration
+	rateLimit        time.Duration
 }
 
-func newMongoService(connectionString string, mgoLib mongoLib, bsonService bsonService, mongoTimeout time.Duration) *mongoService {
+func newMongoService(connectionString string, mgoLib mongoLib, bsonService bsonService, mongoTimeout time.Duration, rateLimit time.Duration) *mongoService {
 	return &mongoService{
 		connectionString: connectionString,
 		mgoLib:           mgoLib,
 		bsonService:      bsonService,
 		mongoTimeout:     mongoTimeout,
+		rateLimit:        rateLimit,
 	}
 }
 
@@ -78,8 +80,7 @@ func (m *mongoService) RestoreCollectionFrom(database, collection string, reader
 	var batchBytes int
 	batchStart := time.Now()
 
-	// set rate limit to 250ms
-	limiter := rate.NewLimiter(rate.Every(250*time.Millisecond), 1)
+	limiter := rate.NewLimiter(rate.Every(m.rateLimit), 1)
 
 	for {
 
