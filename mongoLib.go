@@ -1,27 +1,30 @@
 package main
 
 import (
+	"time"
+
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"time"
 )
 
 type mongoLib interface {
 	DialWithTimeout(url string, timeout time.Duration) (mongoSession, error)
 }
 
-type labixMongo struct {}
+type labixMongo struct{}
 
 func (m *labixMongo) DialWithTimeout(url string, timeout time.Duration) (mongoSession, error) {
 	session, err := mgo.DialWithTimeout(url, timeout)
 	if err != nil {
 		return nil, err
 	}
+	session.SetSyncTimeout(timeout)
+	session.SetSocketTimeout(timeout)
+	session.SetPrefetch(1.0)
 	return &labixSession{session}, nil
 }
 
 type mongoSession interface {
-	SetPrefetch(p float64)
 	Close()
 	SnapshotIter(database, collection string, findQuery interface{}) mongoIter
 	RemoveAll(database, collection string, removeQuery interface{}) error
@@ -30,10 +33,6 @@ type mongoSession interface {
 
 type labixSession struct {
 	session *mgo.Session
-}
-
-func (s *labixSession) SetPrefetch(p float64) {
-	s.session.SetPrefetch(p)
 }
 
 func (s *labixSession) Close() {

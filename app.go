@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/jawher/mow.cli"
@@ -60,6 +61,12 @@ func main() {
 		EnvVar: "MONGODB_COLLECTIONS",
 		Value:  "foo/content,foo/bar",
 	})
+	mongoTimeout := app.Int(cli.IntOpt{
+		Name:   "mongoTimeout",
+		Desc:   "Mongo session connection timeout in seconds. (e.g. 60)",
+		EnvVar: "MONGO_TIMEOUT",
+		Value:  60,
+	})
 
 	app.Command("scheduled-backup", "backup a set of mongodb collections", func(cmd *cli.Cmd) {
 		cronExpr := cmd.String(cli.StringOpt{
@@ -87,7 +94,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
-			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{})
+			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{}, time.Duration(*mongoTimeout)*time.Second)
 			statusKeeper, err := newBoltStatusKeeper(*dbPath)
 			if err != nil {
 				log.Fatalf("failed setting up to read or write scheduled backup status results: %v\n", err)
@@ -117,7 +124,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
-			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{})
+			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{}, time.Duration(*mongoTimeout)*time.Second)
 			statusKeeper, err := newBoltStatusKeeper(*dbPath)
 			if err != nil {
 				log.Fatalf("failed setting up to read or write scheduled backup status results: %v\n", err)
@@ -141,7 +148,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
-			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{})
+			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{}, time.Duration(*mongoTimeout)*time.Second)
 			if err != nil {
 				log.Fatalf("failed setting up to read or write scheduled backup status results: %v\n", err)
 			}

@@ -14,7 +14,7 @@ import (
 
 func TestDumpCollectionTo_Ok(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
-	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, nil)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, nil, 0)
 	stringWriter := bytes.NewBufferString("")
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
@@ -34,7 +34,7 @@ func TestDumpCollectionTo_Ok(t *testing.T) {
 
 func TestDumpCollectionTo_SessionErr(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
-	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, nil)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, nil, 0)
 	stringWriter := bytes.NewBufferString("")
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(&labixSession{}, fmt.Errorf("oops"))
 
@@ -46,7 +46,7 @@ func TestDumpCollectionTo_SessionErr(t *testing.T) {
 
 func TestDumpCollectionTo_WriterErr(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
-	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, nil)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, nil, 0)
 	cappedStringWriter := newCappedBuffer(make([]byte, 0, 4), 11)
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
@@ -65,7 +65,7 @@ func TestDumpCollectionTo_WriterErr(t *testing.T) {
 
 func TestDumpCollectionTo_IterationErr(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
-	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, nil)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, nil, 0)
 	stringWriter := bytes.NewBufferString("")
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
@@ -87,7 +87,7 @@ func TestDumpCollectionTo_IterationErr(t *testing.T) {
 func TestRestoreCollectionFrom_Ok(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
 	mockedBsonService := new(mockBsonService)
-	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, mockedBsonService)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, mockedBsonService, 0)
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
 	mockedMongoSession.On("RemoveAll", "database1", "collection1", nil).Return(nil)
@@ -112,7 +112,7 @@ func TestRestoreCollectionFrom_Ok(t *testing.T) {
 func TestRestoreCollectionFrom_DialErr(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
 	mockedBsonService := new(mockBsonService)
-	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, mockedBsonService)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, mockedBsonService, 0)
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, fmt.Errorf("couldn't dial"))
 
@@ -125,7 +125,7 @@ func TestRestoreCollectionFrom_DialErr(t *testing.T) {
 func TestRestoreCollectionFrom_ErrOnClean(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
 	mockedBsonService := new(mockBsonService)
-	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, mockedBsonService)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, mockedBsonService, 0)
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
 	mockedMongoSession.On("RemoveAll", "database1", "collection1", nil).Return(fmt.Errorf("couldn't clean"))
@@ -140,7 +140,7 @@ func TestRestoreCollectionFrom_ErrOnClean(t *testing.T) {
 func TestRestoreCollectionFrom_ErrOnRead(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
 	mockedBsonService := new(mockBsonService)
-	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, mockedBsonService)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, mockedBsonService, 0)
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
 	mockedMongoSession.On("RemoveAll", "database1", "collection1", nil).Return(nil)
@@ -162,7 +162,7 @@ func TestRestoreCollectionFrom_ErrOnRead(t *testing.T) {
 func TestRestoreCollectionFrom_ErrorOnWrite(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
 	mockedBsonService := new(mockBsonService)
-	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, mockedBsonService)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, mockedBsonService, 0)
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
 	mockedMongoSession.On("RemoveAll", "database1", "collection1", nil).Return(nil)
@@ -183,7 +183,7 @@ func TestRestoreCollectionFrom_ErrorOnWrite(t *testing.T) {
 func TestRestoreCollectionFrom_ErrorAfterOneBulkBatching(t *testing.T) {
 	mockedMongoLib := new(mockMongoLib)
 	mockedBsonService := new(mockBsonService)
-	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, mockedBsonService)
+	mongoService := newMongoService("127.0.0.1:27010,127.0.0.2:27010", mockedMongoLib, mockedBsonService, 0)
 	mockedMongoSession := new(mockMongoSession)
 	mockedMongoLib.On("DialWithTimeout", "127.0.0.1:27010,127.0.0.2:27010", 0*time.Millisecond).Return(mockedMongoSession, nil)
 	mockedMongoSession.On("RemoveAll", "database1", "collection1", nil).Return(nil)

@@ -27,10 +27,6 @@ func (m *mockMongoSession) SnapshotIter(database, collection string, findQuery i
 	return args.Get(0).(mongoIter)
 }
 
-func (m *mockMongoSession) SetPrefetch(p float64) {
-	m.Called(p)
-}
-
 func (m *mockMongoSession) Close() {
 	m.Called()
 }

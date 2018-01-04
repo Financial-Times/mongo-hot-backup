@@ -19,18 +19,24 @@ type mongoService struct {
 	connectionString string
 	mgoLib           mongoLib
 	bsonService      bsonService
+	mongoTimeout     time.Duration
 }
 
-func newMongoService(connectionString string, mgoLib mongoLib, bsonService bsonService) *mongoService {
-	return &mongoService{connectionString: connectionString, mgoLib: mgoLib, bsonService: bsonService}
+func newMongoService(connectionString string, mgoLib mongoLib, bsonService bsonService, mongoTimeout time.Duration) *mongoService {
+	return &mongoService{
+		connectionString: connectionString,
+		mgoLib:           mgoLib,
+		bsonService:      bsonService,
+		mongoTimeout:     mongoTimeout,
+	}
 }
 
 func (m *mongoService) DumpCollectionTo(database, collection string, writer io.Writer) error {
-	session, err := m.mgoLib.DialWithTimeout(m.connectionString, 0)
+	session, err := m.mgoLib.DialWithTimeout(m.connectionString, m.mongoTimeout)
 	if err != nil {
 		return err
 	}
-	session.SetPrefetch(1.0)
+
 	defer session.Close()
 
 	start := time.Now()
