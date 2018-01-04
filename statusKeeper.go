@@ -15,18 +15,21 @@ type statusKeeper interface {
 }
 
 type boltStatusKeeper struct {
-	db *bolt.DB
+	dbPath string
 }
 
-func newBoltStatusKeeper(dbPath string) (*boltStatusKeeper, error) {
-	err := os.MkdirAll(filepath.Dir(dbPath), 0600)
+func newBoltStatusKeeper(dbPath string) *boltStatusKeeper {
+	return &boltStatusKeeper{dbPath}
+}
 
+func (s *boltStatusKeeper) Save(result backupResult) error {
+	err := os.MkdirAll(filepath.Dir(s.dbPath), 0600)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	db, err := bolt.Open(dbPath, 0600, nil)
+	db, err := bolt.Open(s.dbPath, 0600, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer db.Close()
 
@@ -38,14 +41,11 @@ func newBoltStatusKeeper(dbPath string) (*boltStatusKeeper, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return &boltStatusKeeper{db}, nil
-}
 
-func (s *boltStatusKeeper) Save(result backupResult) error {
 	r, _ := json.Marshal(result)
-	return s.db.Update(func(tx *bolt.Tx) error {
+	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("Results"))
 		err := b.Put([]byte(fmt.Sprintf("%s/%s", result.Collection.database, result.Collection.collection)), r)
 		return err
@@ -53,8 +53,14 @@ func (s *boltStatusKeeper) Save(result backupResult) error {
 }
 
 func (s *boltStatusKeeper) Get(coll dbColl) (backupResult, error) {
+	db, err := bolt.Open(s.dbPath, 0600, nil)
+	if err != nil {
+		return backupResult{}, err
+	}
+	defer db.Close()
+
 	var result backupResult
-	err := s.db.View(func(tx *bolt.Tx) error {
+	err = db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("Results"))
 		v := b.Get([]byte(fmt.Sprintf("%s/%s", coll.database, coll.collection)))
 
