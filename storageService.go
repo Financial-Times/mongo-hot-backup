@@ -45,7 +45,7 @@ func (s *s3StorageService) Writer(date, database, collection string) (io.WriteCl
 	if err != nil {
 		return nil, err
 	}
-	return snappy.NewBufferedWriter(w), nil
+	return newSnappyWriteCloser(snappy.NewBufferedWriter(w), w), nil
 }
 
 func (s *s3StorageService) Reader(date, database, collection string) (io.ReadCloser, error) {
@@ -57,6 +57,29 @@ func (s *s3StorageService) Reader(date, database, collection string) (io.ReadClo
 	}
 
 	return newSnappyReadCloser(snappy.NewReader(rc), rc), nil
+}
+
+type snappyWriteCloser struct {
+	snappyWriter *snappy.Writer
+	writeCloser  io.WriteCloser
+}
+
+func newSnappyWriteCloser(snappyWriter *snappy.Writer, writeCloser io.WriteCloser) *snappyWriteCloser {
+	return &snappyWriteCloser{
+		snappyWriter,
+		writeCloser,
+	}
+}
+
+func (swc *snappyWriteCloser) Write(p []byte) (nRet int, errRet error) {
+	return swc.snappyWriter.Write(p)
+}
+
+func (swc *snappyWriteCloser) Close() error {
+	if err := swc.snappyWriter.Close(); err != nil {
+		return err
+	}
+	return swc.writeCloser.Close()
 }
 
 type snappyReadCloser struct {
