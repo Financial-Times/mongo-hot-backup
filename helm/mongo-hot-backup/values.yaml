@@ -10,6 +10,7 @@ image:
   repository: nexus.in.ft.com:5000/coco/mongo-hot-backup
   pullPolicy: IfNotPresent
 resources:
+  requests:
+    memory: 64Mi
   limits:
-    memory: 384Mi
-
+    memory: 512Mi
