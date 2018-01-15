@@ -3,7 +3,7 @@ jobs:
   build:
     working_directory: /go/src/github.com/Financial-Times/mongo-hot-backup
     docker:
-      - image: golang:1.9.2-alpine3.7
+      - image: golang:1.9.2
         environment:
           GOPATH: /go
           CIRCLE_TEST_REPORTS: /tmp/test-results
