@@ -1,4 +1,13 @@
 version: 2
+workflows:
+  version: 2
+  test-and-build-docker:
+    jobs:
+      - build
+      - dockerfile:
+          filters:
+            tags:
+              only: /.*/
 jobs:
   build:
     working_directory: /go/src/github.com/Financial-Times/mongo-hot-backup
@@ -67,11 +76,3 @@ jobs:
             source ${BASH_ENV}
             docker login nexus.in.ft.com:5000 -u ${DOCKER_USER} -p ${DOCKER_PASSWORD}
             docker push nexus.in.ft.com:5000/coco/${CIRCLE_PROJECT_REPONAME}:${DOCKER_TAG}
-workflows:
-  version: 2
-  test-and-build-docker:
-    jobs:
-      - build
-      - dockerfile:
-          requires:
-            - build
