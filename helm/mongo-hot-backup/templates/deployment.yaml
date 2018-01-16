@@ -39,9 +39,6 @@ spec:
       - name: {{ .Values.service.name }}
         image: "{{ .Values.image.repository }}:{{ .Chart.Version }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
-        resources:
-          limits:
-            memory: 256Mi
         env:
         - name: MONGODB
           valueFrom:
@@ -76,7 +73,7 @@ spec:
         - name: RUN
           value: "false"
         - name: RATE_LIMIT
-          value: 500
+          value: "500"
         ports:
         - containerPort: 8080
         volumeMounts:
