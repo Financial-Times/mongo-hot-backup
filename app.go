@@ -94,6 +94,12 @@ func main() {
 			EnvVar: "RUN",
 			Value:  true,
 		})
+		healthHours := cmd.Int(cli.IntOpt{
+			Name:   "health-hours",
+			Desc:   "Number of hours back in time in which healthy backup needs to exist of each named collection for the app to be healthy. (e.g. 24)",
+			EnvVar: "HEALTH_HOURS",
+			Value:  77,
+		})
 
 		cmd.Action = func() {
 			parsedColls, err := parseCollections(*colls)
@@ -109,7 +115,7 @@ func main() {
 			storageService := newS3StorageService(*s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
 			backupService := newMongoBackupService(dbService, storageService, statusKeeper)
 			scheduler := newCronScheduler(backupService, statusKeeper)
-			healthService := newHealthService(statusKeeper, parsedColls, healthConfig{
+			healthService := newHealthService(*healthHours, statusKeeper, parsedColls, healthConfig{
 				appSystemCode: "up-mgz",
 				appName:       "mongobackup",
 			})

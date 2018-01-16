@@ -10,6 +10,7 @@ import (
 )
 
 type healthService struct {
+	hours        int
 	statusKeeper statusKeeper
 	config       healthConfig
 	checks       []health.Check
@@ -21,8 +22,9 @@ type healthConfig struct {
 	appName       string
 }
 
-func newHealthService(statusKeeper statusKeeper, colls []dbColl, config healthConfig) *healthService {
+func newHealthService(hours int, statusKeeper statusKeeper, colls []dbColl, config healthConfig) *healthService {
 	hService := &healthService{
+		hours:        hours,
 		statusKeeper: statusKeeper,
 		config:       config,
 	}
@@ -48,7 +50,7 @@ func (h *healthService) backupImageCheck(coll dbColl) health.Check {
 		Name:             fmt.Sprintf("%s/%s", coll.database, coll.collection),
 		PanicGuide:       "https://dewey.ft.com/mongo-hot-backup.html",
 		Severity:         1,
-		TechnicalSummary: fmt.Sprintf("A backup for database %s, collection %s has not been made in the last 26 hours.", coll.database, coll.collection),
+		TechnicalSummary: fmt.Sprintf("A backup for database %s, collection %s has not been made in the last %d hours.", coll.database, coll.collection, h.hours),
 		Checker:          func() (string, error) { return h.verifyExistingBackupImage(coll) },
 	}
 }
@@ -59,8 +61,8 @@ func (h *healthService) verifyExistingBackupImage(coll dbColl) (string, error) {
 		return err.Error(), err
 	}
 
-	if time.Since(result.Timestamp).Hours() > 77 {
-		msg := "Last backup more than 77 hours ago. Check backup was taken."
+	if int(time.Since(result.Timestamp).Hours()) > h.hours {
+		msg := fmt.Sprintf("Last backup more than %d hours ago. Check backup was taken.", h.hours)
 		return msg, errors.New(msg)
 	}
 	if !result.Success {
