@@ -51,7 +51,7 @@ spec:
         - name: S3_DOMAIN
           value: s3-eu-west-1.amazonaws.com
         - name: S3_BUCKET
-          value: com.ft.coco-mongo-backup.prod
+          value: com.ft.mongo-backup.prod
         - name: S3_DIR
           valueFrom:
             configMapKeyRef:
