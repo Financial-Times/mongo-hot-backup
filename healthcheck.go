@@ -59,8 +59,8 @@ func (h *healthService) verifyExistingBackupImage(coll dbColl) (string, error) {
 		return err.Error(), err
 	}
 
-	if time.Since(result.Timestamp).Hours() > 26 {
-		msg := "Last backup more than 26 hours ago. Check backup was taken."
+	if time.Since(result.Timestamp).Hours() > 77 {
+		msg := "Last backup more than 77 hours ago. Check backup was taken."
 		return msg, errors.New(msg)
 	}
 	if !result.Success {
