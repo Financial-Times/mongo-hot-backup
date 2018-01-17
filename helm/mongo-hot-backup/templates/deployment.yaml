@@ -46,9 +46,9 @@ spec:
               name: global-config
               key: mongo.addresses
         - name: S3_DOMAIN
-          value: s3-eu-west-1.amazonaws.com
+          value: {{ .Values.service.s3Domain }}
         - name: S3_BUCKET
-          value: com.ft.mongo-backup.prod
+          value: {{ .Values.service.s3Bucket }}
         - name: S3_DIR
           valueFrom:
             configMapKeyRef:
@@ -67,13 +67,13 @@ spec:
         - name: MONGODB_COLLECTIONS
           value: {{ .Values.env.MONGODB_COLLECTIONS }}
         - name: CRON
-          value: 0 15 * * *
+          value: {{ .Values.service.cron }}
         - name: DBPATH
           value: /{{ .Values.service.volumeMountPath }}/state.db
         - name: RUN
           value: "false"
         - name: RATE_LIMIT
-          value: "500"
+          value: {{ .Values.service.rateLimit }}
         ports:
         - containerPort: 8080
         volumeMounts:
