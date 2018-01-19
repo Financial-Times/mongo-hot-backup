@@ -25,13 +25,20 @@ type scheduledJob struct {
 
 func (s *cronScheduler) SheduleBackups(colls []dbColl, cronExpr string, runAtStart bool) {
 	if runAtStart {
-		s.backupService.Backup(colls)
+		err := s.backupService.Backup(colls)
+		if err != nil {
+			log.Errorf("Error making scheduled backup: %v\n", err)
+		}
+
 	}
 
 	c := cron.New()
 	var jobs []scheduledJob
 	eID, _ := c.AddFunc(cronExpr, func() {
-		s.backupService.Backup(colls)
+		err := s.backupService.Backup(colls)
+		if err != nil {
+			log.Errorf("Error making scheduled backup: %v\n", err)
+		}
 		for _, job := range jobs {
 			log.Printf("Next scheduled run: %v\n", c.Entry(job.eID).Next)
 		}
