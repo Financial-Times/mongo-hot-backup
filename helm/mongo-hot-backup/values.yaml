@@ -6,7 +6,7 @@ service:
   hasHealthcheck: "true"
   volumeMountPath: data/mongo-hot-backup
   s3Domain: s3-eu-west-1.amazonaws.com
-  s3Bucket: com.ft.upp.mongo-backup
+  s3Bucket: "com.ft.upp.mongo-backup"
   cron: 0 15 * * *
   rateLimit: "500"
 replicaCount: 1

@@ -73,7 +73,7 @@ spec:
         - name: RUN
           value: "false"
         - name: RATE_LIMIT
-          value: {{ .Values.service.rateLimit }}
+          value: "{{ .Values.service.rateLimit }}"
         ports:
         - containerPort: 8080
         volumeMounts:
