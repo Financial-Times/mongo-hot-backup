@@ -22,15 +22,17 @@ type mongoService struct {
 	bsonService      bsonService
 	mongoTimeout     time.Duration
 	rateLimit        time.Duration
+	batchLimit       int
 }
 
-func newMongoService(connectionString string, mgoLib mongoLib, bsonService bsonService, mongoTimeout time.Duration, rateLimit time.Duration) *mongoService {
+func newMongoService(connectionString string, mgoLib mongoLib, bsonService bsonService, mongoTimeout time.Duration, rateLimit time.Duration, batchLimit int) *mongoService {
 	return &mongoService{
 		connectionString: connectionString,
 		mgoLib:           mgoLib,
 		bsonService:      bsonService,
 		mongoTimeout:     mongoTimeout,
 		rateLimit:        rateLimit,
+		batchLimit:       batchLimit,
 	}
 }
 
@@ -95,7 +97,7 @@ func (m *mongoService) RestoreCollectionFrom(database, collection string, reader
 		// If we have something to write and the next doc would push the batch over
 		// the limit, write the batch out now. 15000000 is intended to be within the
 		// expected 16MB limit
-		if batchBytes > 0 && batchBytes+len(next) > 15000000 {
+		if batchBytes > 0 && batchBytes+len(next) > m.batchLimit {
 			err = bulk.Run()
 			if err != nil {
 				return fmt.Errorf("error while writing bulk: %v", err)

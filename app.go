@@ -73,6 +73,12 @@ func main() {
 		EnvVar: "RATE_LIMIT",
 		Value:  250,
 	})
+	batchLimit := app.Int(cli.IntOpt{
+		Name:   "batchLimit",
+		Desc:   "The size of data in bytes, that a bulk write is writing into mongodb at once. Not recommended to use more than 16MB (e.g. 15000000)",
+		EnvVar: "BATCH_LIMIT",
+		Value:  15000000,
+	})
 
 	app.Command("scheduled-backup", "backup a set of mongodb collections", func(cmd *cli.Cmd) {
 		cronExpr := cmd.String(cli.StringOpt{
@@ -106,7 +112,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
-			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{}, time.Duration(*mongoTimeout)*time.Second, time.Duration(*rateLimit)*time.Millisecond)
+			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{}, time.Duration(*mongoTimeout)*time.Second, time.Duration(*rateLimit)*time.Millisecond, *batchLimit)
 			statusKeeper, err := newBoltStatusKeeper(*dbPath)
 			if err != nil {
 				log.Fatalf("failed setting up to read or write scheduled backup status results: %v\n", err)
@@ -137,7 +143,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
-			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{}, time.Duration(*mongoTimeout)*time.Second, time.Duration(*rateLimit)*time.Millisecond)
+			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{}, time.Duration(*mongoTimeout)*time.Second, time.Duration(*rateLimit)*time.Millisecond, *batchLimit)
 			statusKeeper, err := newBoltStatusKeeper(*dbPath)
 			if err != nil {
 				log.Fatalf("failed setting up to read or write scheduled backup status results: %v\n", err)
@@ -162,7 +168,7 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v\n", err)
 			}
-			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{}, time.Duration(*mongoTimeout)*time.Second, time.Duration(*rateLimit)*time.Millisecond)
+			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{}, time.Duration(*mongoTimeout)*time.Second, time.Duration(*rateLimit)*time.Millisecond, *batchLimit)
 			if err != nil {
 				log.Fatalf("failed setting up to read or write scheduled backup status results: %v\n", err)
 			}
