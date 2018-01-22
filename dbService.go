@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"time"
 
@@ -63,13 +64,13 @@ func (m *mongoService) DumpCollectionTo(database, collection string, writer io.W
 func (m *mongoService) RestoreCollectionFrom(database, collection string, reader io.Reader) error {
 	session, err := m.mgoLib.DialWithTimeout(m.connectionString, 0)
 	if err != nil {
-		return err
+		return fmt.Errorf("error while dialing mongo session: %v", err)
 	}
 	defer session.Close()
 
 	err = m.clearCollection(session, database, collection)
 	if err != nil {
-		return err
+		return fmt.Errorf("error while clearing collection=%v/%v: %v", database, collection, err)
 	}
 
 	start := time.Now()
@@ -83,10 +84,9 @@ func (m *mongoService) RestoreCollectionFrom(database, collection string, reader
 	limiter := rate.NewLimiter(rate.Every(m.rateLimit), 1)
 
 	for {
-
 		next, err := m.bsonService.ReadNextBSON(reader)
 		if err != nil {
-			return err
+			return fmt.Errorf("error while reading bson: %v", err)
 		}
 		if next == nil {
 			break
@@ -98,7 +98,7 @@ func (m *mongoService) RestoreCollectionFrom(database, collection string, reader
 		if batchBytes > 0 && batchBytes+len(next) > 15000000 {
 			err = bulk.Run()
 			if err != nil {
-				return err
+				return fmt.Errorf("error while writing bulk: %v", err)
 			}
 
 			var duration = time.Since(batchStart)
@@ -117,8 +117,11 @@ func (m *mongoService) RestoreCollectionFrom(database, collection string, reader
 		batchBytes += len(next)
 	}
 	err = bulk.Run()
+	if err != nil {
+		return fmt.Errorf("error while writing bulk: %v", err)
+	}
 	log.Infof("finished restore of %s/%s. Duration: %v", database, collection, time.Since(start))
-	return err
+	return nil
 }
 
 func (m *mongoService) clearCollection(session mongoSession, database, collection string) error {

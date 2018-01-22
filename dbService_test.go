@@ -119,7 +119,7 @@ func TestRestoreCollectionFrom_DialErr(t *testing.T) {
 	err := mongoService.RestoreCollectionFrom("database1", "collection1", strings.NewReader("nothing"))
 
 	assert.Error(t, err, "Error was expected during restore.")
-	assert.Equal(t, "couldn't dial", err.Error())
+	assert.Equal(t, "error while dialing mongo session: couldn't dial", err.Error())
 }
 
 func TestRestoreCollectionFrom_ErrOnClean(t *testing.T) {
@@ -134,7 +134,7 @@ func TestRestoreCollectionFrom_ErrOnClean(t *testing.T) {
 	err := mongoService.RestoreCollectionFrom("database1", "collection1", strings.NewReader("nothing"))
 
 	assert.Error(t, err, "Error was expected during restore.")
-	assert.Equal(t, "couldn't clean", err.Error())
+	assert.Equal(t, "error while clearing collection=database1/collection1: couldn't clean", err.Error())
 }
 
 func TestRestoreCollectionFrom_ErrOnRead(t *testing.T) {
@@ -156,7 +156,7 @@ func TestRestoreCollectionFrom_ErrOnRead(t *testing.T) {
 	err := mongoService.RestoreCollectionFrom("database1", "collection1", strings.NewReader("nothing"))
 
 	assert.Error(t, err, "Error was expected during restore.")
-	assert.Equal(t, "error on read from unit test", err.Error())
+	assert.Equal(t, "error while reading bson: error on read from unit test", err.Error())
 }
 
 func TestRestoreCollectionFrom_ErrorOnWrite(t *testing.T) {

@@ -19,7 +19,7 @@ func (m *defaultBsonService) ReadNextBSON(reader io.Reader) ([]byte, error) {
 	_, err := io.ReadFull(reader, lenBytes[:])
 	if err != nil {
 		if err != io.EOF {
-			return nil, err
+			return nil, fmt.Errorf("error reading (full) from buffer: %v", io.ErrUnexpectedEOF)
 		}
 		return nil, nil
 	}
@@ -36,10 +36,9 @@ func (m *defaultBsonService) ReadNextBSON(reader io.Reader) ([]byte, error) {
 	_, err = io.ReadAtLeast(reader, buf[4:], int(docLen-4))
 	if err != nil {
 		if err == io.EOF {
-			// this is a broken document.
-			return nil, io.ErrUnexpectedEOF
+			return nil, fmt.Errorf("error, this is a broken document: %v", io.ErrUnexpectedEOF)
 		}
-		return nil, err
+		return nil, fmt.Errorf("error reading (partial) from buffer: %v", io.ErrUnexpectedEOF)
 	}
 	return buf, nil
 }
