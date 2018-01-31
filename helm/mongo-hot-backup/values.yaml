@@ -8,7 +8,6 @@ service:
   s3Domain: s3-eu-west-1.amazonaws.com
   s3Bucket: "com.ft.upp.mongo-backup"
   cron: 0 15 * * *
-  rateLimit: "500"
 replicaCount: 1
 image:
   repository: nexus.in.ft.com:5000/coco/mongo-hot-backup

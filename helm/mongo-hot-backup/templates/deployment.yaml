@@ -72,8 +72,11 @@ spec:
           value: /{{ .Values.service.volumeMountPath }}/state.db
         - name: RUN
           value: "false"
-        - name: RATE_LIMIT
-          value: "{{ .Values.service.rateLimit }}"
+        - name: HEALTH_HOURS
+          valueFrom:
+            configMapKeyRef:
+              name: global-config
+              key: mongo-hot-backup.health-hours
         ports:
         - containerPort: 8080
         volumeMounts:

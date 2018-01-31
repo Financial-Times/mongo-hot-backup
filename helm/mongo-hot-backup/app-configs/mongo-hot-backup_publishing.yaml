@@ -2,4 +2,4 @@ replicaCount: 1
 service:
   name: mongo-hot-backup
 env:
-  MONGODB_COLLECTIONS: native-store/methode,native-store/wordpress,native-store/v1-metadata,native-store/video
+  MONGODB_COLLECTIONS: native-store/methode,native-store/wordpress,native-store/v1-metadata,native-store/video,native-store/video-metadata,native-store/pac-metadata
