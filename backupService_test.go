@@ -24,7 +24,7 @@ func TestBackup_Ok(t *testing.T) {
 		})).Return(nil)
 	backupService := newMongoBackupService(mockedMongoService, mockedStorageService, mockedStatusKeeper)
 
-	err := backupService.Backup([]dbColl{dbColl{"database1", "collection1"}})
+	err := backupService.Backup([]dbColl{{"database1", "collection1"}})
 
 	assert.NoError(t, err, "Error wasn't expected during backup.")
 }
@@ -36,7 +36,7 @@ func TestBackup_ErrorOnStorage(t *testing.T) {
 	mockedStorageService.On("Writer", mock.MatchedBy(func(date string) bool { return true }), "database1", "collection1").Return(mockedWriter, fmt.Errorf("Couldn't create writer for storage"))
 	backupService := newMongoBackupService(nil, mockedStorageService, nil)
 
-	err := backupService.Backup([]dbColl{dbColl{"database1", "collection1"}})
+	err := backupService.Backup([]dbColl{{"database1", "collection1"}})
 
 	assert.Error(t, err, "Error was expected during backup.")
 	assert.Equal(t, "Couldn't create writer for storage", err.Error())
@@ -58,7 +58,7 @@ func TestBackup_ErrorOnDump(t *testing.T) {
 		})).Return(nil)
 	backupService := newMongoBackupService(mockedMongoService, mockedStorageService, mockedStatusKeeper)
 
-	err := backupService.Backup([]dbColl{dbColl{"database1", "collection1"}})
+	err := backupService.Backup([]dbColl{{"database1", "collection1"}})
 
 	assert.Error(t, err, "Error was expected during backup.")
 	assert.Equal(t, "dumping failed for database1/collection1: Couldn't dump db", err.Error())
@@ -80,7 +80,7 @@ func TestBackup_ErrorOnSavingStatus(t *testing.T) {
 		})).Return(fmt.Errorf("Coulnd't save status of backup"))
 	backupService := newMongoBackupService(mockedMongoService, mockedStorageService, mockedStatusKeeper)
 
-	err := backupService.Backup([]dbColl{dbColl{"database1", "collection1"}})
+	err := backupService.Backup([]dbColl{{"database1", "collection1"}})
 
 	assert.Error(t, err, "Error was expected during backup.")
 	assert.Equal(t, "Coulnd't save status of backup", err.Error())
@@ -95,7 +95,7 @@ func TestRestore_OK(t *testing.T) {
 	mockedMongoService.On("RestoreCollectionFrom", "database1", "collection1", mockedReadCloser).Return(nil)
 	backupService := newMongoBackupService(mockedMongoService, mockedStorageService, nil)
 
-	err := backupService.Restore("2017-09-04T12-40-36", []dbColl{dbColl{"database1", "collection1"}})
+	err := backupService.Restore("2017-09-04T12-40-36", []dbColl{{"database1", "collection1"}})
 
 	assert.NoError(t, err, "Error wasn't expected during backup.")
 }
@@ -108,7 +108,7 @@ func TestRestore_ErrorOnReadingFromStorage(t *testing.T) {
 	mockedMongoService.On("RestoreCollectionFrom", "database1", "collection1", mockedReadCloser).Return(nil)
 	backupService := newMongoBackupService(mockedMongoService, mockedStorageService, nil)
 
-	err := backupService.Restore("2017-09-04T12-40-36", []dbColl{dbColl{"database1", "collection1"}})
+	err := backupService.Restore("2017-09-04T12-40-36", []dbColl{{"database1", "collection1"}})
 
 	assert.Error(t, err, "Error getting reader to access S3. Test")
 }
@@ -122,7 +122,7 @@ func TestRestore_ErrorOnRestore(t *testing.T) {
 	mockedMongoService.On("RestoreCollectionFrom", "database1", "collection1", mockedReadCloser).Return(fmt.Errorf("Error while restoring. Test"))
 	backupService := newMongoBackupService(mockedMongoService, mockedStorageService, nil)
 
-	err := backupService.Restore("2017-09-04T12-40-36", []dbColl{dbColl{"database1", "collection1"}})
+	err := backupService.Restore("2017-09-04T12-40-36", []dbColl{{"database1", "collection1"}})
 
 	assert.Error(t, err, "Error while restoring. Test")
 }
