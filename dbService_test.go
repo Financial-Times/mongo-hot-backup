@@ -41,7 +41,7 @@ func TestDumpCollectionTo_SessionErr(t *testing.T) {
 	err := mongoService.DumpCollectionTo("database1", "collection1", stringWriter)
 
 	assert.Error(t, err, "Error was expected during dial.")
-	assert.Equal(t, "oops", err.Error())
+	assert.Equal(t, "Coulnd't dial mongo session: oops", err.Error())
 }
 
 func TestDumpCollectionTo_WriterErr(t *testing.T) {
@@ -80,8 +80,8 @@ func TestDumpCollectionTo_IterationErr(t *testing.T) {
 	err := mongoService.DumpCollectionTo("database1", "collection1", stringWriter)
 
 	assert.Error(t, err, "Error expected for iterator.")
-	assert.Equal(t, "datadatadata", stringWriter.String())
-	assert.Equal(t, "iteration error", err.Error())
+	assert.Equal(t, "", stringWriter.String())
+	assert.Equal(t, "Couldn't obtain iterator over collection=database1/collection1: iteration error", err.Error())
 }
 
 func TestRestoreCollectionFrom_Ok(t *testing.T) {

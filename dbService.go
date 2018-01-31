@@ -38,7 +38,7 @@ func newMongoService(connectionString string, mgoLib mongoLib, bsonService bsonS
 func (m *mongoService) DumpCollectionTo(database, collection string, writer io.Writer) error {
 	session, err := m.mgoLib.DialWithTimeout(m.connectionString, m.mongoTimeout)
 	if err != nil {
-		return err
+		return fmt.Errorf("Coulnd't dial mongo session: %v", err)
 	}
 
 	defer session.Close()
@@ -47,6 +47,10 @@ func (m *mongoService) DumpCollectionTo(database, collection string, writer io.W
 	log.Infof("backing up %s/%s", database, collection)
 
 	iter := session.SnapshotIter(database, collection, nil)
+	err = iter.Err()
+	if err != nil {
+		return fmt.Errorf("Couldn't obtain iterator over collection=%v/%v: %v", database, collection, err)
+	}
 	for {
 		result, hasNext := iter.Next()
 		if !hasNext {
@@ -59,7 +63,11 @@ func (m *mongoService) DumpCollectionTo(database, collection string, writer io.W
 	}
 
 	log.Infof("backing up finished for %s/%s. duration=%v", database, collection, time.Now().Sub(start))
-	return iter.Err()
+	err = iter.Err()
+	if err != nil {
+		return fmt.Errorf("Error while iterating over collection=%v/%v noticed only at the end: %v", database, collection, err)
+	}
+	return nil
 }
 
 func (m *mongoService) RestoreCollectionFrom(database, collection string, reader io.Reader) error {
