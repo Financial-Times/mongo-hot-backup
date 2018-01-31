@@ -109,12 +109,12 @@ func main() {
 		cmd.Action = func() {
 			parsedColls, err := parseCollections(*colls)
 			if err != nil {
-				log.Fatalf("error parsing collections parameter: %v\n", err)
+				log.Fatalf("error parsing collections parameter: %v", err)
 			}
 			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{}, time.Duration(*mongoTimeout)*time.Second, time.Duration(*rateLimit)*time.Millisecond, *batchLimit)
 			statusKeeper, err := newBoltStatusKeeper(*dbPath)
 			if err != nil {
-				log.Fatalf("failed setting up to read or write scheduled backup status results: %v\n", err)
+				log.Fatalf("failed setting up to read or write scheduled backup status results: %v", err)
 			}
 			defer statusKeeper.Close()
 			storageService := newS3StorageService(*s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)

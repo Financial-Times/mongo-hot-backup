@@ -27,7 +27,7 @@ func (s *cronScheduler) SheduleBackups(colls []dbColl, cronExpr string, runAtSta
 	if runAtStart {
 		err := s.backupService.Backup(colls)
 		if err != nil {
-			log.Errorf("Error making scheduled backup: %v\n", err)
+			log.Errorf("Error making scheduled backup: %v", err)
 		}
 
 	}
@@ -37,10 +37,10 @@ func (s *cronScheduler) SheduleBackups(colls []dbColl, cronExpr string, runAtSta
 	eID, _ := c.AddFunc(cronExpr, func() {
 		err := s.backupService.Backup(colls)
 		if err != nil {
-			log.Errorf("Error making scheduled backup: %v\n", err)
+			log.Errorf("Error making scheduled backup: %v", err)
 		}
 		for _, job := range jobs {
-			log.Printf("Next scheduled run: %v\n", c.Entry(job.eID).Next)
+			log.Printf("Next scheduled run: %v", c.Entry(job.eID).Next)
 		}
 	})
 	jobs = append(jobs, scheduledJob{eID, colls})
@@ -48,6 +48,6 @@ func (s *cronScheduler) SheduleBackups(colls []dbColl, cronExpr string, runAtSta
 	c.Start()
 
 	for _, job := range jobs {
-		log.Printf("Next scheduled run: %v\n", c.Entry(job.eID).Next)
+		log.Printf("Next scheduled run: %v", c.Entry(job.eID).Next)
 	}
 }
