@@ -86,7 +86,6 @@ func main() {
 			Desc:   "Cron expression for when to run",
 			EnvVar: "CRON",
 			Value:  "30 10 * * *",
-			//Value:  "@every 30s",
 		})
 		dbPath := cmd.String(cli.StringOpt{
 			Name:   "dbPath",
@@ -104,7 +103,7 @@ func main() {
 			Name:   "health-hours",
 			Desc:   "Number of hours back in time in which healthy backup needs to exist of each named collection for the app to be healthy. (e.g. 24)",
 			EnvVar: "HEALTH_HOURS",
-			Value:  77,
+			Value:  24,
 		})
 
 		cmd.Action = func() {
@@ -191,7 +190,7 @@ func parseCollections(colls string) ([]dbColl, error) {
 	for _, coll := range strings.Split(colls, ",") {
 		c := strings.Split(coll, "/")
 		if len(c) != 2 {
-			return nil, fmt.Errorf("failed to parse connections string: %s\n", colls)
+			return nil, fmt.Errorf("failed to parse connections string: %s", colls)
 		}
 		cn = append(cn, dbColl{c[0], c[1]})
 	}

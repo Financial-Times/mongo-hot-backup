@@ -4,23 +4,21 @@
 
 This tool can back up or restore MongoDB collections while DB is running to/from AWS S3.
 
-You can deploy a docker container that will run backups on schedule (default at 10:30am every day). Or you can just run the container to make a single backup, or restore from a given point of time.
+You can deploy a docker container that will run backups on schedule. Or you can just run the container to make a single backup, or restore from a given point of time.
 
-For the schedule option, the state of backups is kept in a boltdb file at `/var/data/mongo-hot-backup/state.db`
+For the schedule option, the state of backups is kept in a boltdb file. (at `/var/data/mongo-hot-backup/state.db` or where you set it)
 
-Health endpoint is available at `0.0.0.0:8080/__health` and will report healthy if there was a successful backup for each configured collection in the last 26 hours.
+Health endpoint is available at `0.0.0.0:8080/__health` and will report healthy if there was a successful backup for each configured collection in the last X hours, also configurable. Good-to-go `/__gtg` endpoint available as well, and `/build-info`.
 
-An initial backup will be ran upon startup if there's no backup found in the last 26 hours. Can be disabled.
+An initial backup to be ran upon startup can be enabled.
 
-## Installation
+## Installation and Building
 
 ```
+go get -u github.com/kardianos/govendor
 go get -u github.com/Financial-Times/mongo-hot-backup
-```
-
-## Building
-
-```
+cd $GOPATH/src/github.com/Financial-Times/methode-article-image-set-mapper
+govendor sync
 docker build -t coco/mongo-hot-backup .
 ```
 
@@ -31,16 +29,18 @@ docker build -t coco/mongo-hot-backup .
 example:
 
 ```
-export MONGODB=ip-172-24-11-64.eu-west-1.compute.internal:27018,ip-172-24-186-252.eu-west-1.compute.internal:27020,ip-172-24-74-51.eu-west-1.compute.internal:27019
-export S3_BUCKET=com.ft.coco-mongo-backup.prod;
-export S3_DOMAIN=s3-eu-west-1.amazonaws.com
-export S3_DIR=pre-prod-uk
-export AWS_ACCESS_KEY_ID=123
-export AWS_SECRET_ACCESS_KEY=456
-export CRON="1 0 * * *"
-export RUN=false
-
-docker run --rm --env "MONGODB=$MONGODB" --env "S3_DOMAIN=$S3_DOMAIN" --env "S3_BUCKET=$S3_BUCKET" --env "S3_DIR=$S3_DIR" --env "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" --env "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" --env "CRON=$CRON" --env "RUN=false" coco/mongo-hot-backup:2.0.0-productionize-rc7 backup --collections="upp-store/lists,upp-store/list-notifications"
+docker run --rm \
+  --env "MONGODB=ip-172-24-11-64.eu-west-1.compute.internal:27018,ip-172-24-186-252.eu-west-1.compute.internal:27020,ip-172-24-74-51.eu-west-1.compute.internal:27019" \
+  --env "S3_DOMAIN=s3-eu-west-1.amazonaws.com" \
+  --env "S3_BUCKET=com.ft.upp.mongo-backup" \
+  --env "S3_DIR=upp-staging-delivery-eu" \
+  --env "AWS_ACCESS_KEY_ID=123" \
+  --env "AWS_SECRET_ACCESS_KEY=456" \
+  --env "CRON=0 0 * * *" \
+  --env "RUN=false" \
+  --env "HEALTH_HOURS=26" \
+  --env "MONGODB_COLLECTIONS="upp-store/lists,upp-store/list-notifications"
+  nexus.in.ft.com:5000/coco/mongo-hot-backup:2.0.0 scheduled-backup
 ```
 
 The help `docker run --rm coco/mongo-hot-backup scheduled-backup --help` could supply you a bit more information about how arguments should be received.
@@ -48,14 +48,15 @@ The help `docker run --rm coco/mongo-hot-backup scheduled-backup --help` could s
 ### Creating a single backup
 
 ```
-export MONGODB=ip-172-24-11-64.eu-west-1.compute.internal:27018,ip-172-24-186-252.eu-west-1.compute.internal:27020,ip-172-24-74-51.eu-west-1.compute.internal:27019
-export S3_BUCKET=com.ft.coco-mongo-backup.prod;
-export S3_DOMAIN=s3-eu-west-1.amazonaws.com
-export S3_DIR=pre-prod-uk
-export AWS_ACCESS_KEY_ID=123
-export AWS_SECRET_ACCESS_KEY=456
-
-docker run --rm --env "MONGODB=$MONGODB" --env "S3_DOMAIN=$S3_DOMAIN" --env "S3_BUCKET=$S3_BUCKET" --env "S3_DIR=$S3_DIR" --env "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" --env "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" coco/mongo-hot-backup:2.0.0-productionize-rc7 backup --collections="upp-store/lists,upp-store/list-notifications"
+docker run --rm \
+  --env "MONGODB=ip-172-24-11-64.eu-west-1.compute.internal:27018,ip-172-24-186-252.eu-west-1.compute.internal:27020,ip-172-24-74-51.eu-west-1.compute.internal:27019" \
+  --env "S3_DOMAIN=s3-eu-west-1.amazonaws.com" \
+  --env "S3_BUCKET=com.ft.upp.mongo-backup" \
+  --env "S3_DIR=upp-staging-delivery-eu" \
+  --env "AWS_ACCESS_KEY_ID=123" \
+  --env "AWS_SECRET_ACCESS_KEY=456" \
+  --env "MONGODB_COLLECTIONS="upp-store/lists,upp-store/list-notifications"
+  nexus.in.ft.com:5000/coco/mongo-hot-backup:2.0.0 backup
 ```
 
 You can also try `docker run --rm coco/mongo-hot-backup backup --help`
@@ -63,18 +64,21 @@ You can also try `docker run --rm coco/mongo-hot-backup backup --help`
 ### Restoring
 
 ```
-export MONGODB=ip-172-24-11-64.eu-west-1.compute.internal:27018,ip-172-24-186-252.eu-west-1.compute.internal:27020,ip-172-24-74-51.eu-west-1.compute.internal:27019
-export S3_BUCKET=com.ft.coco-mongo-backup.prod;
-export S3_DOMAIN=s3-eu-west-1.amazonaws.com
-export S3_DIR=pre-prod-uk
-export AWS_ACCESS_KEY_ID=123
-export AWS_SECRET_ACCESS_KEY=456
-
-docker run --rm --env "MONGODB=$MONGODB" --env "S3_DOMAIN=$S3_DOMAIN" --env "S3_BUCKET=$S3_BUCKET" --env "S3_DIR=$S3_DIR" --env "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" --env "AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" coco/mongo-hot-backup:2.0.0-productionize-rc7 restore --collections="upp-store/lists,upp-store/list-notifications" --date="2017-09-04T12-40-36"
+docker run --rm \
+  --env "MONGODB=ip-172-24-11-64.eu-west-1.compute.internal:27018,ip-172-24-186-252.eu-west-1.compute.internal:27020,ip-172-24-74-51.eu-west-1.compute.internal:27019" \
+  --env "S3_DOMAIN=s3-eu-west-1.amazonaws.com" \
+  --env "S3_BUCKET=com.ft.upp.mongo-backup" \
+  --env "S3_DIR=upp-staging-delivery-eu" \
+  --env "AWS_ACCESS_KEY_ID=123" \
+  --env "AWS_SECRET_ACCESS_KEY=456" \
+  --env "RATE_LIMIT=1250" \
+  --env "BATCH_LIMIT=8000000" \
+  --env "MONGODB_COLLECTIONS="upp-store/lists,upp-store/list-notifications"
+  nexus.in.ft.com:5000/coco/mongo-hot-backup:2.0.0 restore --date="2017-11-23T14-53-20"
 ```
 
 You can also try `docker run --rm coco/mongo-hot-backup restore --help`
 
 ## Links
 
-* [mongodb backup/restore documentation on FT Technology's Google Sites](https://sites.google.com/a/ft.com/technology/systems/dynamic-semantic-publishing/extra-publishing/mongo-db-run-book/mongo-db-backup-restore)
+* [mongodb backup/restore documentation](https://docs.google.com/document/d/1f3-1JHWrXy2mQrBfqs4jRuPNhO5jThKdnh8J7uyoJBU/edit#)
