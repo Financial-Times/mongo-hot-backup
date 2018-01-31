@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/time/rate"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 type dbService interface {

@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"path/filepath"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/klauspost/compress/snappy"
 	"github.com/rlmcpherson/s3gof3r"
+	log "github.com/sirupsen/logrus"
 )
 
 const extension = ".bson.snappy"
