@@ -39,8 +39,9 @@ func (h *scheduleHTTPService) ScheduleAndServe(colls []dbColl, cronExpr string, 
 	}
 
 	r := mux.NewRouter()
-	r.HandleFunc("/__health", http.HandlerFunc(health.Handler(hc)))
-	r.Path("/__gtg").Handler(handlers.MethodHandler{"GET": http.HandlerFunc(status.NewGoodToGoHandler(h.healthService.GTG))})
+	r.Path("/__health").Handler(handlers.MethodHandler{"GET": http.HandlerFunc(health.Handler(hc))})
+	r.Path(status.GTGPath).Handler(handlers.MethodHandler{"GET": http.HandlerFunc(status.NewGoodToGoHandler(h.healthService.GTG))})
+	r.Path(status.BuildInfoPath).Handler(handlers.MethodHandler{"GET": http.HandlerFunc(status.BuildInfoHandler)})
 	http.Handle("/", r)
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
