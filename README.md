@@ -1,88 +1,84 @@
-# MongoDB Hot Backup
+# mongo-hot-backup
+
+[![Circle CI](https://circleci.com/gh/Financial-Times/mongo-hot-backup/tree/master.png?style=shield)](https://circleci.com/gh/Financial-Times/mongo-hot-backup/tree/master)[![Go Report Card](https://goreportcard.com/badge/github.com/Financial-Times/mongo-hot-backup)](https://goreportcard.com/report/github.com/Financial-Times/mongo-hot-backup) [![Coverage Status](https://coveralls.io/repos/github/Financial-Times/mongo-hot-backup/badge.svg)](https://coveralls.io/github/Financial-Times/mongo-hot-backup)
 
 This tool can back up or restore MongoDB collections while DB is running to/from AWS S3.
 
-# Usage
-## Build/install
-### Go app
-```
-go get -u github.com/Financial-Times/mongodb-hot-backup
-```
-### Docker app
-```
-docker build -t coco/mongodb-hot-backup   .
-```
+You can deploy a docker container that will run backups on schedule. Or you can just run the container to make a single backup, or restore from a given point of time.
 
-## Run
-### Backup
-```
-docker run \
-        -e MONGODB=<MONGODB_ADDRESSES> \
-        -e S3_DOMAIN=<S3_DOMAIN> \
-        -e S3_BUCKET=<S3_BUCKET> \
-        -e S3_DIR=<ENVIRONMENT_TAG> \
-        -e AWS_ACCESS_KEY_ID=<AWS_ACCESS_KEY> \
-        -e AWS_SECRET_ACCESS_KEY=<AWS_SECRET_KEY> \
-        coco/mongodb-hot-backup<:app_version> /mongodb-hot-backup backup <db>/<coll_1>,<db>/<coll_2>,<db>/<coll_3>
-```
+For the schedule option, the state of backups is kept in a boltdb file. (at `/var/data/mongo-hot-backup/state.db` or where you set it)
 
-* <MONGODB_ADDRESSES> - The address to connect to MongoDB cluster
-* <S3_DOMAIN> - The domain name of S3 location where the backup should go
-* <S3_BUCKET> - The S3 bucket name
-* <ENVIRONMENT_TAG> - The S3 folder name, which should represent the environment tag
-* <AWS_ACCESS_KEY> - The AWS access key
-* <AWS_SECRET_KEY> - The AWS secret key
-* <app_version> - The Docker image version of the app. Latest if omitted
-* <db> - The DB under the collections are
-* <coll_nr> - The collection to be backed up
+Health endpoint is available at `0.0.0.0:8080/__health` and will report healthy if there was a successful backup for each configured collection in the last X hours, also configurable. Good-to-go `/__gtg` endpoint available as well, and `/build-info`.
 
-Example:
-```
-docker run \
-          -e MONGODB=$(for x in $(etcdctl ls /ft/config/mongodb);do echo -n $(etcdctl get $x/host):$(etcdctl get $x/port)"," ; done | sed s/.$//) \
-          -e S3_DOMAIN=s3-eu-west-1.amazonaws.com \
-          -e S3_BUCKET=com.ft.coco-mongo-backup.prod \
-          -e S3_DIR=$(/usr/bin/etcdctl get /ft/config/environment_tag) \
-          -e AWS_ACCESS_KEY_ID=$(/usr/bin/etcdctl get /ft/_credentials/aws/aws_access_key_id) \
-          -e AWS_SECRET_ACCESS_KEY=$(/usr/bin/etcdctl get /ft/_credentials/aws/aws_secret_access_key) \
-          coco/mongodb-hot-backup:v0.2.0 /mongodb-hot-backup backup upp-store/content,upp-store/lists,upp-store/notifications
-```
+An initial backup to be ran upon startup can be enabled.
 
-
-### Restore
-
-Note that the restore function no longer has a timeout. This may lead to the restore hanging indefinitely if something goes wrong, but doesn't cause the app to crash (unlikely, but possible).
+## Installation and Building
 
 ```
- docker run \
-           -e MONGODB=<MONGODB_ADDRESSES> \
-           -e S3_DOMAIN=<S3_DOMAIN> \
-           -e S3_BUCKET=<S3_BUCKET> \
-           -e S3_DIR=<ENVIRONMENT_TAG> \
-           -e AWS_ACCESS_KEY_ID=<AWS_ACCESS_KEY> \
-           -e AWS_SECRET_ACCESS_KEY=<AWS_SECRET_KEY> \
-           coco/mongodb-hot-backup<:app_version> /mongodb-hot-backup restore <db>/<coll_1>,<db>/<coll_2>,<db>/<coll_3> <timestamp>
+go get -u github.com/kardianos/govendor
+go get -u github.com/Financial-Times/mongo-hot-backup
+cd $GOPATH/src/github.com/Financial-Times/methode-article-image-set-mapper
+govendor sync
+docker build -t coco/mongo-hot-backup .
 ```
 
-* <MONGODB_ADDRESSES> - The address to connect to MongoDB cluster
-* <S3_DOMAIN> - The domain name of S3 location where the restore should go
-* <S3_BUCKET> - The S3 bucket name
-* <ENVIRONMENT_TAG> - The S3 folder name, which should represent the environment tag
-* <AWS_ACCESS_KEY> - The AWS access key
-* <AWS_SECRET_KEY> - The AWS secret key
-* <app_version> - The Docker image version of the app. Latest if omitted
-* <db> - The DB under the collections are
-* <coll_nr> - The collection to be restored
-* <timestamp> - The timestamp of the backup date
+## Usage
 
-Example:
+### Creating backups on a schedule
+
+example:
+
 ```
-docker run \
-          -e MONGODB=$(for x in $(etcdctl ls /ft/config/mongodb);do echo -n $(etcdctl get $x/host):$(etcdctl get $x/port)"," ; done | sed s/.$//) \
-          -e S3_DOMAIN=s3-eu-west-1.amazonaws.com \
-          -e S3_BUCKET=com.ft.coco-mongo-backup.prod \
-          -e S3_DIR=/pre-prod-uk/ \
-          -e AWS_ACCESS_KEY_ID=$(/usr/bin/etcdctl get /ft/_credentials/aws/aws_access_key_id) \
-          -e AWS_SECRET_ACCESS_KEY=$(/usr/bin/etcdctl get /ft/_credentials/aws/aws_secret_access_key) \
-          coco/mongodb-hot-backup:v0.2.0 /mongodb-hot-backup restore upp-store/content,upp-store/lists,upp-store/notifications 2017-02-14T08-25-36
+docker run --rm \
+  --env "MONGODB=ip-172-24-11-64.eu-west-1.compute.internal:27018,ip-172-24-186-252.eu-west-1.compute.internal:27020,ip-172-24-74-51.eu-west-1.compute.internal:27019" \
+  --env "S3_DOMAIN=s3-eu-west-1.amazonaws.com" \
+  --env "S3_BUCKET=com.ft.upp.mongo-backup" \
+  --env "S3_DIR=upp-staging-delivery-eu" \
+  --env "AWS_ACCESS_KEY_ID=123" \
+  --env "AWS_SECRET_ACCESS_KEY=456" \
+  --env "CRON=0 0 * * *" \
+  --env "RUN=false" \
+  --env "HEALTH_HOURS=26" \
+  --env "MONGODB_COLLECTIONS="upp-store/lists,upp-store/list-notifications"
+  nexus.in.ft.com:5000/coco/mongo-hot-backup:2.0.0 scheduled-backup
 ```
+
+The help `docker run --rm coco/mongo-hot-backup scheduled-backup --help` could supply you a bit more information about how arguments should be received.
+
+### Creating a single backup
+
+```
+docker run --rm \
+  --env "MONGODB=ip-172-24-11-64.eu-west-1.compute.internal:27018,ip-172-24-186-252.eu-west-1.compute.internal:27020,ip-172-24-74-51.eu-west-1.compute.internal:27019" \
+  --env "S3_DOMAIN=s3-eu-west-1.amazonaws.com" \
+  --env "S3_BUCKET=com.ft.upp.mongo-backup" \
+  --env "S3_DIR=upp-staging-delivery-eu" \
+  --env "AWS_ACCESS_KEY_ID=123" \
+  --env "AWS_SECRET_ACCESS_KEY=456" \
+  --env "MONGODB_COLLECTIONS="upp-store/lists,upp-store/list-notifications"
+  nexus.in.ft.com:5000/coco/mongo-hot-backup:2.0.0 backup
+```
+
+You can also try `docker run --rm coco/mongo-hot-backup backup --help`
+
+### Restoring
+
+```
+docker run --rm \
+  --env "MONGODB=ip-172-24-11-64.eu-west-1.compute.internal:27018,ip-172-24-186-252.eu-west-1.compute.internal:27020,ip-172-24-74-51.eu-west-1.compute.internal:27019" \
+  --env "S3_DOMAIN=s3-eu-west-1.amazonaws.com" \
+  --env "S3_BUCKET=com.ft.upp.mongo-backup" \
+  --env "S3_DIR=upp-staging-delivery-eu" \
+  --env "AWS_ACCESS_KEY_ID=123" \
+  --env "AWS_SECRET_ACCESS_KEY=456" \
+  --env "RATE_LIMIT=1250" \
+  --env "BATCH_LIMIT=8000000" \
+  --env "MONGODB_COLLECTIONS="upp-store/lists,upp-store/list-notifications"
+  nexus.in.ft.com:5000/coco/mongo-hot-backup:2.0.0 restore --date="2017-11-23T14-53-20"
+```
+
+You can also try `docker run --rm coco/mongo-hot-backup restore --help`
+
+## Links
+
+* [mongodb backup/restore documentation](https://docs.google.com/document/d/1f3-1JHWrXy2mQrBfqs4jRuPNhO5jThKdnh8J7uyoJBU/edit#)

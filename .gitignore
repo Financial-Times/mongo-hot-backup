@@ -1,2 +1,7 @@
+*.iml
+*.exe
 .idea
-up-mongolizer*
+/mongo-hot-backup
+vendor/*/
+.project
+.vscode
