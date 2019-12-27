@@ -12,7 +12,7 @@ RUN VERSION="version=$(git describe --tag --always 2> /dev/null)" \
   && BUILDER="builder=$(go version)" \
   && LDFLAGS="-s -w -X '"${BUILDINFO_PACKAGE}$VERSION"' -X '"${BUILDINFO_PACKAGE}$DATETIME"' -X '"${BUILDINFO_PACKAGE}$REPOSITORY"' -X '"${BUILDINFO_PACKAGE}$REVISION"' -X '"${BUILDINFO_PACKAGE}$BUILDER"'" \
   && echo "Build flags: $LDFLAGS" \
-  && go build -a -o /artifacts/${PROJECT} -ldflags="${LDFLAGS}"
+  && CGO_ENABLED=0 go build -a -o /artifacts/${PROJECT} -ldflags="${LDFLAGS}"
 
 EXPOSE 8080
 
