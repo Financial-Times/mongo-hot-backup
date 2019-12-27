@@ -12,7 +12,7 @@ jobs:
   build:
     working_directory: /go/src/github.com/Financial-Times/mongo-hot-backup
     docker:
-      - image: golang:1.9.2
+      - image: golang:1
         environment:
           GOPATH: /go
           CIRCLE_TEST_REPORTS: /tmp/test-results
@@ -50,7 +50,7 @@ jobs:
   dockerfile:
     working_directory: /mongo-hot-backup
     docker:
-      - image: docker:1.12.6-git
+      - image: docker:1.18
     steps:
       - checkout
       - setup_remote_docker
