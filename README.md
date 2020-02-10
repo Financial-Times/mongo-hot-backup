@@ -8,7 +8,9 @@ You can deploy a docker container that will run backups on schedule. Or you can 
 
 For the schedule option, the state of backups is kept in a boltdb file at `/var/data/mongo-hot-backup/state.db` or where you set it.
 
-A health endpoint is available at `0.0.0.0:8080/__health` and will report healthy if there was a successful backup for each configured collection in the last X hours, also configurable. Good-to-go `/__gtg` endpoint available as well, and `/build-info`.
+A health endpoint is available at `0.0.0.0:8080/__health` and will report healthy if there was a successful backup
+ for each configured collection in the last X hours, also configurable. Good-to-go `/__gtg` endpoint available as
+  well, and `/__build-info`.
 
 An initial backup to be run upon startup can be enabled.
 

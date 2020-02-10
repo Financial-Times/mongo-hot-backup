@@ -1,73 +1,20 @@
-version: 2
+version: 2.1
+
+orbs:
+  ft-golang-ci: financial-times/golang-ci@1.0.0
+
 workflows:
-  version: 2
-  test-and-build-docker:
+  tests_and_docker:
     jobs:
-      - build
-      - dockerfile:
-          filters:
-            tags:
-              only: /.*/
-jobs:
-  build:
-    working_directory: /go/src/github.com/Financial-Times/mongo-hot-backup
-    docker:
-      - image: golang:1
-        environment:
-          GOPATH: /go
-          CIRCLE_TEST_REPORTS: /tmp/test-results
-          CIRCLE_COVERAGE_REPORT: /tmp/coverage-results
-    steps:
-      - checkout
-      - run:
-          name: External Dependencies
-          command: |
-            GO111MODULE=off go get -u github.com/mattn/goveralls
-            GO111MODULE=off go get -u github.com/jstemmer/go-junit-report
-            curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.18.0
-            wget https://raw.githubusercontent.com/Financial-Times/upp-coding-standard/v1.0.0/golangci-config/.golangci.yml
-      - run:
-          name: Test Results
-          command: |
-            mkdir -p ${CIRCLE_TEST_REPORTS}
-            mkdir -p ${CIRCLE_COVERAGE_REPORT}
-      - run:
-          name: Go Build
-          command: go build -mod=readonly -v
-      - run:
-          name: Run Tests
-          command: go test -mod=readonly -race -cover -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out ./... | go-junit-report > ${CIRCLE_TEST_REPORTS}/junit.xml
-      - run:
-          name: Upload Coverage
-          command: goveralls -coverprofile=${CIRCLE_COVERAGE_REPORT}/coverage.out -service=circle-ci -repotoken=$COVERALLS_TOKEN
-      - store_test_results:
-          path: /tmp/test-results
-  dockerfile:
-    working_directory: /mongo-hot-backup
-    docker:
-      - image: docker:18
-    steps:
-      - checkout
-      - setup_remote_docker
-      - run:
-          name: Set Docker image tag based on branch or git tag
-          command: |
-            if [ ! -z "${CIRCLE_TAG}" ] ; then
-              echo 'export DOCKER_TAG=${CIRCLE_TAG}' >> $BASH_ENV
-            elif [ "${CIRCLE_BRANCH}" == "master" ] ; then
-              echo 'export DOCKER_TAG=latest' >> $BASH_ENV
-            else
-              echo 'export DOCKER_TAG=$( echo ${CIRCLE_BRANCH} | cut -f 2 -d / )' >> $BASH_ENV
-            fi
-      - run:
-          name: Build Dockerfile
-          command: |
-            source ${BASH_ENV}
-            docker build \
-            --tag nexus.in.ft.com:5000/coco/${CIRCLE_PROJECT_REPONAME}:${DOCKER_TAG} .
-      - deploy:
-          name: Push Docker image
-          command: |
-            source ${BASH_ENV}
-            docker login nexus.in.ft.com:5000 -u ${DOCKER_USER} -p ${DOCKER_PASSWORD}
-            docker push nexus.in.ft.com:5000/coco/${CIRCLE_PROJECT_REPONAME}:${DOCKER_TAG}
+      - ft-golang-ci/build-and-test:
+          name: build-and-test-project
+
+      - ft-golang-ci/docker-build:
+          name: build-docker-image
+          requires:
+            - build-and-test-project
+  snyk-scanning:
+    jobs:
+      - ft-golang-ci/scan:
+          name: scan-dependencies
+          context: org-global
