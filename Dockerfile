@@ -19,8 +19,6 @@ RUN VERSION="version=$(git describe --tag --always 2> /dev/null)" \
     && CGO_ENABLED=0 go build -mod=readonly -a -o /artifacts/${PROJECT} -ldflags="${LDFLAGS}" \
     && echo "Build flags: ${LDFLAGS}"
 
-EXPOSE 8080
-
 # Multi-stage build - copy only the certs and the binary into the image
 FROM scratch
 WORKDIR /

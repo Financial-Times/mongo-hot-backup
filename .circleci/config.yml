@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  ft-golang-ci: financial-times/golang-ci@1.0.0
+  ft-golang-ci: financial-times/golang-ci@1
 
 workflows:
   tests_and_docker:

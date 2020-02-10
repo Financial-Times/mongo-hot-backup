@@ -1,4 +1,4 @@
-module github.com/Financial-Times/mongo-hot-backup
+module github.com/Financial-Times/mongo-hot-backup/v3
 
 go 1.13
 
