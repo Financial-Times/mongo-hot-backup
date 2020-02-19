@@ -6,27 +6,33 @@ This tool can back up or restore MongoDB collections while DB is running to/from
 
 You can deploy a docker container that will run backups on schedule. Or you can just run the container to make a single backup, or restore from a given point of time.
 
-For the schedule option, the state of backups is kept in a boltdb file. (at `/var/data/mongo-hot-backup/state.db` or where you set it)
+For the schedule option, the state of backups is kept in a boltdb file at `/var/data/mongo-hot-backup/state.db` or where you set it.
 
-Health endpoint is available at `0.0.0.0:8080/__health` and will report healthy if there was a successful backup for each configured collection in the last X hours, also configurable. Good-to-go `/__gtg` endpoint available as well, and `/build-info`.
+A health endpoint is available at `0.0.0.0:8080/__health` and will report healthy if there was a successful backup
+ for each configured collection in the last X hours, also configurable. Good-to-go `/__gtg` endpoint available as
+  well, and `/__build-info`.
 
-An initial backup to be ran upon startup can be enabled.
+An initial backup to be run upon startup can be enabled.
 
 ## Installation and Building
 
 ```
-go get -u github.com/kardianos/govendor
-go get -u github.com/Financial-Times/mongo-hot-backup
+go get github.com/Financial-Times/mongo-hot-backup
 cd $GOPATH/src/github.com/Financial-Times/methode-article-image-set-mapper
-govendor sync
 docker build -t coco/mongo-hot-backup .
 ```
+
+## Tests
+
+````
+go test -mod=readonly -race ./...
+````
 
 ## Usage
 
 ### Creating backups on a schedule
 
-example:
+Example:
 
 ```
 docker run --rm \
