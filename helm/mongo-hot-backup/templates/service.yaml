@@ -1,17 +1,17 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: {{.Values.service.name}} 
+  name: {{.Values.service.name}}
   labels:
     chart: "{{ .Chart.Name | trunc 63 }}"
     chartVersion: "{{ .Chart.Version | trunc 63 }}"
     app: {{.Values.service.name}}
-    visualize: "true" 
-    hasHealthcheck: "{{ .Values.service.hasHealthcheck }}" 
+    visualize: "true"
+    hasHealthcheck: "{{ .Values.service.hasHealthcheck }}"
 spec:
-  ports: 
-    - port: 8080 
+  ports:
+    - port: 8080
       name: "app"
       targetPort: 8080
   selector:
-    app: {{ .Values.service.name }} 
+    app: {{ .Values.service.name }}
