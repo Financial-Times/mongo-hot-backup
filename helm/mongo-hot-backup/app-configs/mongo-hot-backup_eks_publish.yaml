@@ -1,0 +1,9 @@
+service:
+  name: mongo-hot-backup
+
+eksCluster: true
+
+replicaCount: 1
+
+env:
+  MONGODB_COLLECTIONS: native-store/methode,native-store/wordpress,native-store/v1-metadata,native-store/video,native-store/video-metadata,native-store/pac-metadata,native-store/universal-content
