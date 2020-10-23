@@ -11,7 +11,6 @@ service:
 
 replicaCount: 1
 
-eksCluster: false
 
 image:
   repository: nexus.in.ft.com:5000/coco/mongo-hot-backup

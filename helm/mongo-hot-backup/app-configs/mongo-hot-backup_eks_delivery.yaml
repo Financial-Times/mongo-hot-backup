@@ -1,7 +1,6 @@
 service:
   name: mongo-hot-backup
 
-eksCluster: true
 
 replicaCount: 1
 

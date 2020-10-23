@@ -1,8 +1,4 @@
-{{- if .Values.eksCluster }}
 apiVersion: apps/v1
-{{- else }}
-apiVersion: extensions/v1beta1
-{{- end }}
 kind: Deployment
 metadata:
   name: {{ .Values.service.name }}
@@ -22,7 +18,6 @@ spec:
         app: {{ .Values.service.name }}
         visualize: "true"
     spec:
-{{- if .Values.eksCluster }}
       tolerations:
       # Making sure that Mongo will be scheduled on dedicated nodes. These nodes are tainted and labeled by the provisioner.
       - key: "mongo"
@@ -38,23 +33,6 @@ spec:
                 operator: In
                 values:
                 - "mongo"
-{{- else }}
-      tolerations:
-      # Making sure that Mongo will be scheduled on dedicated nodes. These nodes are tainted and labeled by the provisioner.
-      - key: "dedicated"
-        operator: "Equal"
-        value: "mongo"
-        effect: "NoSchedule"
-      affinity:
-        nodeAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-            nodeSelectorTerms:
-            - matchExpressions:
-              - key: kube-aws.coreos.com/role
-                operator: In
-                values:
-                - mongo-worker
-{{- end }}
       imagePullSecrets:
         - name: nexusregistry
       containers:
