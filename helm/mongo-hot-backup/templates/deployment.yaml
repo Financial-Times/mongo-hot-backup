@@ -24,6 +24,17 @@ spec:
         operator: "Equal"
         value: "false"
         effect: "NoSchedule"
+{{ if .Values.leader }}
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: role
+                operator: In
+                values:
+                - "mongo-lead"
+{{- else }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -33,6 +44,7 @@ spec:
                 operator: In
                 values:
                 - "mongo"
+{{- end }}
       imagePullSecrets:
         - name: nexusregistry
       containers:
