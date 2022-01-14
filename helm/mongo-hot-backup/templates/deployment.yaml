@@ -9,6 +9,8 @@ metadata:
     app: {{ .Values.service.name }}
 spec:
   replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: {{ .Values.service.name }}
