@@ -13,6 +13,7 @@ import (
 
 const (
 	dateFormat = "2006-01-02T15-04-05"
+	systemCode = "mongo-hot-backup"
 )
 
 func main() {
@@ -121,7 +122,7 @@ func main() {
 			backupService := newMongoBackupService(dbService, storageService, statusKeeper)
 			scheduler := newCronScheduler(backupService, statusKeeper)
 			healthService := newHealthService(*healthHours, statusKeeper, parsedColls, healthConfig{
-				appSystemCode: "mongo-hot-backup",
+				appSystemCode: systemCode,
 				appName:       "mongobackup",
 			})
 			httpService := newScheduleHTTPService(scheduler, healthService)

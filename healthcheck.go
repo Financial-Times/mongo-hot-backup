@@ -48,7 +48,7 @@ func (h *healthService) backupImageCheck(coll dbColl) health.Check {
 	return health.Check{
 		BusinessImpact:   "Restoring the database in case of an issue will have to be done from older backups. It will take longer to restore systems to a clean state.",
 		Name:             fmt.Sprintf("%s/%s", coll.database, coll.collection),
-		PanicGuide:       "https://runbooks.in.ft.com/mongo-hot-backup",
+		PanicGuide:       fmt.Sprintf("https://runbooks.ftops.tech/%s", systemCode),
 		Severity:         2,
 		TechnicalSummary: fmt.Sprintf("A backup for database %s, collection %s has not been made in the last %d hours.", coll.database, coll.collection, h.hours),
 		Checker:          func() (string, error) { return h.verifyExistingBackupImage(coll) },
