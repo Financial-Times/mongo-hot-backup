@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jawher/mow.cli"
+	cli "github.com/jawher/mow.cli"
 	"github.com/rlmcpherson/s3gof3r"
 	log "github.com/sirupsen/logrus"
 )
@@ -121,7 +121,7 @@ func main() {
 			backupService := newMongoBackupService(dbService, storageService, statusKeeper)
 			scheduler := newCronScheduler(backupService, statusKeeper)
 			healthService := newHealthService(*healthHours, statusKeeper, parsedColls, healthConfig{
-				appSystemCode: "up-mgz",
+				appSystemCode: "mongo-hot-backup",
 				appName:       "mongobackup",
 			})
 			httpService := newScheduleHTTPService(scheduler, healthService)
