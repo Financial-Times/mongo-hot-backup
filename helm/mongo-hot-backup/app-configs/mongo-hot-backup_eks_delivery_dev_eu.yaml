@@ -1,0 +1,8 @@
+service:
+  name: mongo-hot-backup
+  s3Bucket: "com.ft.upp.mongo-backup-dev"
+
+replicaCount: 1
+
+env:
+  MONGODB_COLLECTIONS: upp-store/content,upp-store/lists,upp-store/internalcomponents,upp-store/notifications,upp-store/list-notifications,upp-store/complementarycontent,upp-store/pages

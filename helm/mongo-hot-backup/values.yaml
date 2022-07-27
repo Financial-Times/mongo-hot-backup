@@ -23,3 +23,5 @@ resources:
   limits:
     cpu: 500m
     memory: 2560Mi
+
+serviceAccountName: eksctl-mongo-hot-backup-serviceaccount
