@@ -6,8 +6,8 @@ import (
 )
 
 type backupService interface {
-	Backup(colls []dbColl) error
-	Restore(dateDir string, colls []dbColl) error
+	Backup(collections []dbColl) error
+	Restore(dateDir string, collections []dbColl) error
 }
 
 type dbColl struct {
@@ -23,9 +23,9 @@ type mongoBackupService struct {
 
 func newMongoBackupService(dbService dbService, storageService storageService, statusKeeper statusKeeper) *mongoBackupService {
 	return &mongoBackupService{
-		dbService,
-		storageService,
-		statusKeeper,
+		dbService:      dbService,
+		storageService: storageService,
+		statusKeeper:   statusKeeper,
 	}
 }
 
@@ -35,11 +35,10 @@ type backupResult struct {
 	Collection dbColl
 }
 
-func (m *mongoBackupService) Backup(colls []dbColl) error {
+func (m *mongoBackupService) Backup(collections []dbColl) error {
 	date := formattedNow()
-	for _, coll := range colls {
-		err := m.backup(date, coll)
-		if err != nil {
+	for _, coll := range collections {
+		if err := m.backup(date, coll); err != nil {
 			return err
 		}
 	}
@@ -47,30 +46,30 @@ func (m *mongoBackupService) Backup(colls []dbColl) error {
 }
 
 func (m *mongoBackupService) backup(date string, coll dbColl) error {
-	w, err := m.storageService.Writer(date, coll.database, coll.collection)
-	if err != nil {
-		return err
-	}
+	w := m.storageService.Writer(date, coll.database, coll.collection)
 	defer w.Close()
 
 	if err := m.dbService.DumpCollectionTo(coll.database, coll.collection, w); err != nil {
-		result := backupResult{false, time.Now(), coll}
-		m.statusKeeper.Save(result)
+		result := backupResult{
+			Timestamp:  time.Now().UTC(),
+			Collection: coll,
+		}
+		_ = m.statusKeeper.Save(result)
+
 		return fmt.Errorf("dumping failed for %s/%s: %v", coll.database, coll.collection, err)
 	}
 
-	if err := w.Close(); err != nil {
-		return err
+	result := backupResult{
+		Success:    true,
+		Timestamp:  time.Now().UTC(),
+		Collection: coll,
 	}
-
-	result := backupResult{true, time.Now(), coll}
 	return m.statusKeeper.Save(result)
 }
 
-func (m *mongoBackupService) Restore(date string, colls []dbColl) error {
-	for _, coll := range colls {
-		err := m.restore(date, coll)
-		if err != nil {
+func (m *mongoBackupService) Restore(date string, collections []dbColl) error {
+	for _, coll := range collections {
+		if err := m.restore(date, coll); err != nil {
 			return err
 		}
 	}
@@ -78,15 +77,10 @@ func (m *mongoBackupService) Restore(date string, colls []dbColl) error {
 }
 
 func (m *mongoBackupService) restore(date string, coll dbColl) error {
-	r, err := m.storageService.Reader(date, coll.database, coll.collection)
-	if err != nil {
-		return err
-	}
+	r := m.storageService.Reader(date, coll.database, coll.collection)
 	defer r.Close()
-	if err := m.dbService.RestoreCollectionFrom(coll.database, coll.collection, r); err != nil {
-		return err
-	}
-	return nil
+
+	return m.dbService.RestoreCollectionFrom(coll.database, coll.collection, r)
 }
 
 func formattedNow() string {

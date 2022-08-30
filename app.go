@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws/session"
 	cli "github.com/jawher/mow.cli"
-	"github.com/rlmcpherson/s3gof3r"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -17,8 +17,6 @@ const (
 )
 
 func main() {
-	s3gof3r.DefaultConfig.Md5Check = false
-
 	app := cli.App("mongobackup", "Backup and restore mongodb collections to/from s3\nBackups are put in a directory structure /<base-dir>/<date>/database/collection")
 
 	connStr := app.String(cli.StringOpt{
@@ -26,12 +24,6 @@ func main() {
 		Desc:   "mongodb connection string",
 		EnvVar: "MONGODB",
 		Value:  "localhost:27017",
-	})
-	s3domain := app.String(cli.StringOpt{
-		Name:   "s3domain",
-		Desc:   "s3 domain",
-		EnvVar: "S3_DOMAIN",
-		Value:  "s3-eu-west-1.amazonaws.com",
 	})
 	s3bucket := app.String(cli.StringOpt{
 		Name:   "bucket",
@@ -44,17 +36,6 @@ func main() {
 		Desc:   "s3 base directory name",
 		EnvVar: "S3_DIR",
 		Value:  "/backups/",
-	})
-	accessKey := app.String(cli.StringOpt{
-		Name:   "aws_access_key_id",
-		Desc:   "AWS Access key id",
-		EnvVar: "AWS_ACCESS_KEY_ID",
-	})
-	secretKey := app.String(cli.StringOpt{
-		Name:      "aws_secret_access_key",
-		Desc:      "AWS secret access key",
-		EnvVar:    "AWS_SECRET_ACCESS_KEY",
-		HideValue: true,
 	})
 	colls := app.String(cli.StringOpt{
 		Name:   "collections",
@@ -118,7 +99,13 @@ func main() {
 				log.Fatalf("failed setting up to read or write scheduled backup status results: %v", err)
 			}
 			defer statusKeeper.Close()
-			storageService := newS3StorageService(*s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
+
+			sess, err := session.NewSession()
+			if err != nil {
+				log.WithError(err).Fatal("Creating AWS session failed")
+			}
+
+			storageService := newS3StorageService(*s3bucket, *s3dir, sess)
 			backupService := newMongoBackupService(dbService, storageService, statusKeeper)
 			scheduler := newCronScheduler(backupService, statusKeeper)
 			healthService := newHealthService(*healthHours, statusKeeper, parsedColls, healthConfig{
@@ -149,7 +136,13 @@ func main() {
 				log.Fatalf("failed setting up to read or write scheduled backup status results: %v", err)
 			}
 			defer statusKeeper.Close()
-			storageService := newS3StorageService(*s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
+
+			sess, err := session.NewSession()
+			if err != nil {
+				log.WithError(err).Fatal("Creating AWS session failed")
+			}
+
+			storageService := newS3StorageService(*s3bucket, *s3dir, sess)
 			backupService := newMongoBackupService(dbService, storageService, statusKeeper)
 			if err := backupService.Backup(parsedColls); err != nil {
 				log.Fatalf("backup failed : %v", err)
@@ -172,7 +165,13 @@ func main() {
 			if err != nil {
 				log.Fatalf("failed setting up to read or write scheduled backup status results: %v", err)
 			}
-			storageService := newS3StorageService(*s3bucket, *s3dir, *s3domain, *accessKey, *secretKey)
+
+			sess, err := session.NewSession()
+			if err != nil {
+				log.WithError(err).Fatal("Creating AWS session failed")
+			}
+
+			storageService := newS3StorageService(*s3bucket, *s3dir, sess)
 			backupService := newMongoBackupService(dbService, storageService, &boltStatusKeeper{})
 			if err := backupService.Restore(*dateDir, parsedColls); err != nil {
 				log.Fatalf("restore failed : %v", err)

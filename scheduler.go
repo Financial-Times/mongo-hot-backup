@@ -2,11 +2,11 @@ package main
 
 import (
 	log "github.com/sirupsen/logrus"
-	cron "gopkg.in/robfig/cron.v2"
+	"gopkg.in/robfig/cron.v2"
 )
 
 type scheduler interface {
-	SheduleBackups(colls []dbColl, cronExpr string, runAtStart bool)
+	ScheduleBackups(colls []dbColl, cronExpr string, runAtStart bool)
 }
 
 type cronScheduler struct {
@@ -23,7 +23,7 @@ type scheduledJob struct {
 	colls []dbColl
 }
 
-func (s *cronScheduler) SheduleBackups(colls []dbColl, cronExpr string, runAtStart bool) {
+func (s *cronScheduler) ScheduleBackups(colls []dbColl, cronExpr string, runAtStart bool) {
 	if runAtStart {
 		err := s.backupService.Backup(colls)
 		if err != nil {

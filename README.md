@@ -37,7 +37,6 @@ Example:
 ```
 docker run --rm \
   --env "MONGODB=ip-172-24-11-64.eu-west-1.compute.internal:27018,ip-172-24-186-252.eu-west-1.compute.internal:27020,ip-172-24-74-51.eu-west-1.compute.internal:27019" \
-  --env "S3_DOMAIN=s3-eu-west-1.amazonaws.com" \
   --env "S3_BUCKET=com.ft.upp.mongo-backup" \
   --env "S3_DIR=upp-staging-delivery-eu" \
   --env "AWS_ACCESS_KEY_ID=123" \
@@ -56,7 +55,6 @@ The help `docker run --rm coco/mongo-hot-backup scheduled-backup --help` could s
 ```
 docker run --rm \
   --env "MONGODB=ip-172-24-11-64.eu-west-1.compute.internal:27018,ip-172-24-186-252.eu-west-1.compute.internal:27020,ip-172-24-74-51.eu-west-1.compute.internal:27019" \
-  --env "S3_DOMAIN=s3-eu-west-1.amazonaws.com" \
   --env "S3_BUCKET=com.ft.upp.mongo-backup" \
   --env "S3_DIR=upp-staging-delivery-eu" \
   --env "AWS_ACCESS_KEY_ID=123" \
@@ -72,7 +70,6 @@ You can also try `docker run --rm coco/mongo-hot-backup backup --help`
 ```
 docker run --rm \
   --env "MONGODB=ip-172-24-11-64.eu-west-1.compute.internal:27018,ip-172-24-186-252.eu-west-1.compute.internal:27020,ip-172-24-74-51.eu-west-1.compute.internal:27019" \
-  --env "S3_DOMAIN=s3-eu-west-1.amazonaws.com" \
   --env "S3_BUCKET=com.ft.upp.mongo-backup" \
   --env "S3_DIR=upp-staging-delivery-eu" \
   --env "AWS_ACCESS_KEY_ID=123" \

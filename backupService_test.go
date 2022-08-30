@@ -9,7 +9,7 @@ import (
 )
 
 func TestBackup_Ok(t *testing.T) {
-	mockedStorageService := new(mockStorageServie)
+	mockedStorageService := new(mockStorageService)
 	mockedWriter := new(mockWriteCloser)
 	mockedWriter.On("Close").Return(nil)
 	mockedStorageService.On("Writer", mock.MatchedBy(func(date string) bool { return true }), "database1", "collection1").Return(mockedWriter, nil)
@@ -29,21 +29,8 @@ func TestBackup_Ok(t *testing.T) {
 	assert.NoError(t, err, "Error wasn't expected during backup.")
 }
 
-func TestBackup_ErrorOnStorage(t *testing.T) {
-	mockedStorageService := new(mockStorageServie)
-	mockedWriter := new(mockWriteCloser)
-	mockedWriter.On("Close").Return(nil)
-	mockedStorageService.On("Writer", mock.MatchedBy(func(date string) bool { return true }), "database1", "collection1").Return(mockedWriter, fmt.Errorf("Couldn't create writer for storage"))
-	backupService := newMongoBackupService(nil, mockedStorageService, nil)
-
-	err := backupService.Backup([]dbColl{{"database1", "collection1"}})
-
-	assert.Error(t, err, "Error was expected during backup.")
-	assert.Equal(t, "Couldn't create writer for storage", err.Error())
-}
-
 func TestBackup_ErrorOnDump(t *testing.T) {
-	mockedStorageService := new(mockStorageServie)
+	mockedStorageService := new(mockStorageService)
 	mockedWriter := new(mockWriteCloser)
 	mockedWriter.On("Close").Return(nil)
 	mockedStorageService.On("Writer", mock.MatchedBy(func(date string) bool { return true }), "database1", "collection1").Return(mockedWriter, nil)
@@ -65,7 +52,7 @@ func TestBackup_ErrorOnDump(t *testing.T) {
 }
 
 func TestBackup_ErrorOnSavingStatus(t *testing.T) {
-	mockedStorageService := new(mockStorageServie)
+	mockedStorageService := new(mockStorageService)
 	mockedWriter := new(mockWriteCloser)
 	mockedWriter.On("Close").Return(nil)
 	mockedStorageService.On("Writer", mock.MatchedBy(func(date string) bool { return true }), "database1", "collection1").Return(mockedWriter, nil)
@@ -87,7 +74,7 @@ func TestBackup_ErrorOnSavingStatus(t *testing.T) {
 }
 
 func TestRestore_OK(t *testing.T) {
-	mockedStorageService := new(mockStorageServie)
+	mockedStorageService := new(mockStorageService)
 	mockedReadCloser := new(mockReadCloser)
 	mockedReadCloser.On("Close").Return(nil)
 	mockedStorageService.On("Reader", "2017-09-04T12-40-36", "database1", "collection1").Return(mockedReadCloser, nil)
@@ -100,21 +87,8 @@ func TestRestore_OK(t *testing.T) {
 	assert.NoError(t, err, "Error wasn't expected during backup.")
 }
 
-func TestRestore_ErrorOnReadingFromStorage(t *testing.T) {
-	mockedStorageService := new(mockStorageServie)
-	mockedReadCloser := new(mockReadCloser)
-	mockedStorageService.On("Reader", "2017-09-04T12-40-36", "database1", "collection1").Return(mockedReadCloser, fmt.Errorf("Error getting reader to access S3. Test"))
-	mockedMongoService := new(mockMongoService)
-	mockedMongoService.On("RestoreCollectionFrom", "database1", "collection1", mockedReadCloser).Return(nil)
-	backupService := newMongoBackupService(mockedMongoService, mockedStorageService, nil)
-
-	err := backupService.Restore("2017-09-04T12-40-36", []dbColl{{"database1", "collection1"}})
-
-	assert.Error(t, err, "Error getting reader to access S3. Test")
-}
-
 func TestRestore_ErrorOnRestore(t *testing.T) {
-	mockedStorageService := new(mockStorageServie)
+	mockedStorageService := new(mockStorageService)
 	mockedReadCloser := new(mockReadCloser)
 	mockedReadCloser.On("Close").Return(nil)
 	mockedStorageService.On("Reader", "2017-09-04T12-40-36", "database1", "collection1").Return(mockedReadCloser, nil)

@@ -69,20 +69,20 @@ func (m *mockMongoBulk) Insert(data []byte) {
 }
 
 type cappedBuffer struct {
-	cap   int
-	mybuf *bytes.Buffer
+	cap int
+	buf *bytes.Buffer
 }
 
 func (b *cappedBuffer) Write(p []byte) (n int, err error) {
-	if len(p)+b.mybuf.Len() > b.cap {
+	if len(p)+b.buf.Len() > b.cap {
 		return len(p), fmt.Errorf("buffer overflow")
 	}
-	b.mybuf.Write(p)
+	b.buf.Write(p)
 	return len(p), nil
 }
 
 func newCappedBuffer(buf []byte, cap int) *cappedBuffer {
-	return &cappedBuffer{mybuf: bytes.NewBuffer(buf), cap: cap}
+	return &cappedBuffer{buf: bytes.NewBuffer(buf), cap: cap}
 }
 
 type mockBsonService struct {
@@ -108,18 +108,18 @@ func (m *mockMongoService) RestoreCollectionFrom(database, collection string, re
 	return args.Error(0)
 }
 
-type mockStorageServie struct {
+type mockStorageService struct {
 	mock.Mock
 }
 
-func (m *mockStorageServie) Reader(date, database, collection string) (io.ReadCloser, error) {
+func (m *mockStorageService) Reader(date, database, collection string) io.ReadCloser {
 	args := m.Called(date, database, collection)
-	return args.Get(0).(io.ReadCloser), args.Error(1)
+	return args.Get(0).(io.ReadCloser)
 }
 
-func (m *mockStorageServie) Writer(date, database, collection string) (io.WriteCloser, error) {
+func (m *mockStorageService) Writer(date, database, collection string) io.WriteCloser {
 	args := m.Called(date, database, collection)
-	return args.Get(0).(io.WriteCloser), args.Error(1)
+	return args.Get(0).(io.WriteCloser)
 }
 
 type mockStatusKeeper struct {

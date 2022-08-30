@@ -60,8 +60,6 @@ spec:
             configMapKeyRef:
               name: global-config
               key: mongo.addresses
-        - name: S3_DOMAIN
-          value: {{ .Values.service.s3Domain }}
         - name: S3_BUCKET
           value: {{ .Values.service.s3Bucket }}
         - name: S3_DIR

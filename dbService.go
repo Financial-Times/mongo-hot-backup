@@ -43,7 +43,7 @@ func (m *mongoService) DumpCollectionTo(database, collection string, writer io.W
 
 	defer session.Close()
 
-	start := time.Now()
+	start := time.Now().UTC()
 	log.Infof("backing up %s/%s", database, collection)
 
 	iter := session.SnapshotIter(database, collection, nil)
@@ -62,7 +62,7 @@ func (m *mongoService) DumpCollectionTo(database, collection string, writer io.W
 		}
 	}
 
-	log.Infof("backing up finished for %s/%s. duration=%v", database, collection, time.Now().Sub(start))
+	log.Infof("backing up finished for %s/%s. duration=%v", database, collection, time.Since(start))
 	err = iter.Err()
 	if err != nil {
 		return fmt.Errorf("Error while iterating over collection=%v/%v noticed only at the end: %v", database, collection, err)
@@ -82,13 +82,13 @@ func (m *mongoService) RestoreCollectionFrom(database, collection string, reader
 		return fmt.Errorf("error while clearing collection=%v/%v: %v", database, collection, err)
 	}
 
-	start := time.Now()
+	start := time.Now().UTC()
 	log.Infof("starting restore of %s/%s", database, collection)
 
 	bulk := session.Bulk(database, collection)
 
 	var batchBytes int
-	batchStart := time.Now()
+	batchStart := time.Now().UTC()
 
 	limiter := rate.NewLimiter(rate.Every(m.rateLimit), 1)
 
@@ -118,7 +118,7 @@ func (m *mongoService) RestoreCollectionFrom(database, collection string, reader
 
 			bulk = session.Bulk(database, collection)
 			batchBytes = 0
-			batchStart = time.Now()
+			batchStart = time.Now().UTC()
 		}
 
 		bulk.Insert(next)
@@ -134,10 +134,10 @@ func (m *mongoService) RestoreCollectionFrom(database, collection string, reader
 }
 
 func (m *mongoService) clearCollection(session mongoSession, database, collection string) error {
-	start := time.Now()
+	start := time.Now().UTC()
 	log.Infof("clearing collection %s/%s", database, collection)
 	err := session.RemoveAll(database, collection, nil)
-	log.Infof("finished clearing collection %s/%s. Duration : %v", database, collection, time.Now().Sub(start))
+	log.Infof("finished clearing collection %s/%s. Duration : %v", database, collection, time.Since(start))
 
 	return err
 }
