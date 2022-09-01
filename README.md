@@ -1,87 +1,71 @@
 # mongo-hot-backup
 
-[![Circle CI](https://circleci.com/gh/Financial-Times/mongo-hot-backup/tree/master.png?style=shield)](https://circleci.com/gh/Financial-Times/mongo-hot-backup/tree/master)[![Go Report Card](https://goreportcard.com/badge/github.com/Financial-Times/mongo-hot-backup)](https://goreportcard.com/report/github.com/Financial-Times/mongo-hot-backup) [![Coverage Status](https://coveralls.io/repos/github/Financial-Times/mongo-hot-backup/badge.svg)](https://coveralls.io/github/Financial-Times/mongo-hot-backup)
+[![Circle CI](https://circleci.com/gh/Financial-Times/mongo-hot-backup/tree/master.png?style=shield)](https://circleci.com/gh/Financial-Times/mongo-hot-backup/tree/master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Financial-Times/mongo-hot-backup)](https://goreportcard.com/report/github.com/Financial-Times/mongo-hot-backup)
+[![Coverage Status](https://coveralls.io/repos/github/Financial-Times/mongo-hot-backup/badge.svg)](https://coveralls.io/github/Financial-Times/mongo-hot-backup)
 
 This tool can back up or restore MongoDB collections while DB is running to/from AWS S3.
 
-You can deploy a docker container that will run backups on schedule. Or you can just run the container to make a single backup, or restore from a given point of time.
-
-For the schedule option, the state of backups is kept in a boltdb file at `/var/data/mongo-hot-backup/state.db` or where you set it.
-
-A health endpoint is available at `0.0.0.0:8080/__health` and will report healthy if there was a successful backup
- for each configured collection in the last X hours, also configurable. Good-to-go `/__gtg` endpoint available as
-  well, and `/__build-info`.
-
+It is configured to run scheduled backups by default.
+The state of backups is kept in a boltdb file at `/var/data/mongo-hot-backup/state.db`.
 An initial backup to be run upon startup can be enabled.
+
+The options to create a single backup or restore from a given point of time are described below.
 
 ## Installation and Building
 
-```
-go get github.com/Financial-Times/mongo-hot-backup
-cd $GOPATH/src/github.com/Financial-Times/methode-article-image-set-mapper
-docker build -t coco/mongo-hot-backup .
+```shell
+  go get github.com/Financial-Times/mongo-hot-backup
+  cd $GOPATH/src/github.com/Financial-Times/mongo-hot-backup
+  go build .
 ```
 
 ## Tests
 
-````
-go test -mod=readonly -race ./...
+````shell
+  go test -mod=readonly -race ./...
 ````
 
 ## Usage
 
-### Creating backups on a schedule
-
-Example:
-
-```
-docker run --rm \
-  --env "MONGODB=ip-172-24-11-64.eu-west-1.compute.internal:27018,ip-172-24-186-252.eu-west-1.compute.internal:27020,ip-172-24-74-51.eu-west-1.compute.internal:27019" \
-  --env "S3_BUCKET=com.ft.upp.mongo-backup" \
-  --env "S3_DIR=upp-staging-delivery-eu" \
-  --env "AWS_ACCESS_KEY_ID=123" \
-  --env "AWS_SECRET_ACCESS_KEY=456" \
-  --env "CRON=0 0 * * *" \
-  --env "RUN=false" \
-  --env "HEALTH_HOURS=26" \
-  --env "MONGODB_COLLECTIONS="upp-store/lists,upp-store/list-notifications"
-  nexus.in.ft.com:5000/coco/mongo-hot-backup:2.0.0 scheduled-backup
-```
-
-The help `docker run --rm coco/mongo-hot-backup scheduled-backup --help` could supply you a bit more information about how arguments should be received.
+You need to be authenticated in the proper EKS cluster before executing the commands below. Proceed with caution!
 
 ### Creating a single backup
 
+```shell
+  kubectl run mongo-hot-backup-manual-$(date +%s) \
+    --image=nexus.in.ft.com:5000/coco/mongo-hot-backup:v3.2.0 \
+    --restart="Never" \
+    --overrides='{"apiVersion": "v1", "spec": {"imagePullSecrets": [{"name": "nexusregistry"}], "serviceAccountName": "eksctl-mongo-hot-backup-serviceaccount"}}' \
+    --env "MONGODB=mongodb-0.default.svc.cluster.local:27017,mongodb-1.default.svc.cluster.local:27017,mongodb-2.default.svc.cluster.local:27017" \
+    --env "S3_BUCKET=com.ft.upp.mongo-backup-dev" \
+    --env "S3_DIR=upp-k8s-dev-delivery-eu" \
+    --env "MONGODB_COLLECTIONS=upp-store/pages" \
+    backup
 ```
-docker run --rm \
-  --env "MONGODB=ip-172-24-11-64.eu-west-1.compute.internal:27018,ip-172-24-186-252.eu-west-1.compute.internal:27020,ip-172-24-74-51.eu-west-1.compute.internal:27019" \
-  --env "S3_BUCKET=com.ft.upp.mongo-backup" \
-  --env "S3_DIR=upp-staging-delivery-eu" \
-  --env "AWS_ACCESS_KEY_ID=123" \
-  --env "AWS_SECRET_ACCESS_KEY=456" \
-  --env "MONGODB_COLLECTIONS="upp-store/lists,upp-store/list-notifications"
-  nexus.in.ft.com:5000/coco/mongo-hot-backup:2.0.0 backup
-```
-
-You can also try `docker run --rm coco/mongo-hot-backup backup --help`
 
 ### Restoring
 
+```shell
+  kubectl run mongo-hot-backup-manual-$(date +%s) \
+    --image=nexus.in.ft.com:5000/coco/mongo-hot-backup:v3.2.0 \
+    --restart="Never" \
+    --overrides='{"apiVersion": "v1", "spec": {"imagePullSecrets": [{"name": "nexusregistry"}], "serviceAccountName": "eksctl-mongo-hot-backup-serviceaccount"}}' \
+    --env "MONGODB=mongodb-0.default.svc.cluster.local:27017,mongodb-1.default.svc.cluster.local:27017,mongodb-2.default.svc.cluster.local:27017" \
+    --env "S3_BUCKET=com.ft.upp.mongo-backup-dev" \
+    --env "S3_DIR=upp-k8s-dev-delivery-eu" \
+    --env "RATE_LIMIT=1000" \
+    --env "BATCH_LIMIT=8000000" \
+    --env "MONGODB_COLLECTIONS=upp-store/pages" \
+    -- restore --date="2022-08-31T15-00-00"
 ```
-docker run --rm \
-  --env "MONGODB=ip-172-24-11-64.eu-west-1.compute.internal:27018,ip-172-24-186-252.eu-west-1.compute.internal:27020,ip-172-24-74-51.eu-west-1.compute.internal:27019" \
-  --env "S3_BUCKET=com.ft.upp.mongo-backup" \
-  --env "S3_DIR=upp-staging-delivery-eu" \
-  --env "AWS_ACCESS_KEY_ID=123" \
-  --env "AWS_SECRET_ACCESS_KEY=456" \
-  --env "RATE_LIMIT=1250" \
-  --env "BATCH_LIMIT=8000000" \
-  --env "MONGODB_COLLECTIONS="upp-store/lists,upp-store/list-notifications"
-  nexus.in.ft.com:5000/coco/mongo-hot-backup:2.0.0 restore --date="2017-11-23T14-53-20"
+
+## Admin endpoints
+
+The admin endpoints are:
+
+```text
+    /__gtg
+    /__health (reports whether there was a successful backup for each configured collection in the last X hours)
+    /__build-info
 ```
-
-You can also try `docker run --rm coco/mongo-hot-backup restore --help`
-
-## Links
-
-* [mongodb backup/restore documentation](https://docs.google.com/document/d/1f3-1JHWrXy2mQrBfqs4jRuPNhO5jThKdnh8J7uyoJBU/edit#)
