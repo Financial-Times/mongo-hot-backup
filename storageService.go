@@ -9,14 +9,18 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/klauspost/compress/snappy"
-	log "github.com/sirupsen/logrus"
 )
 
-const extension = ".bson.snappy"
+type operation int
+
+const (
+	uploadOperation operation = iota
+	downloadOperation
+)
 
 type storageService interface {
-	Writer(date, database, collection string) io.WriteCloser
-	Reader(date, database, collection string) io.ReadCloser
+	Upload(date, database, collection string, reader io.Reader) error
+	Download(date, database, collection string, writer io.Writer) error
 }
 
 type s3StorageService struct {
@@ -33,59 +37,48 @@ func newS3StorageService(bucket, dir string, session *session.Session) *s3Storag
 	}
 }
 
-func (s *s3StorageService) Writer(date, database, collection string) io.WriteCloser {
-	path := filepath.Join(s.dir, date, database, collection+extension)
+func (s *s3StorageService) getFilePath(date, database, collection string) string {
+	const extension = ".bson.snappy"
 
-	logEntry := log.WithField("path", path)
-	logEntry.Info("Uploading file...")
-
-	reader, writer := io.Pipe()
-
-	go func() {
-		uploader := s3manager.NewUploader(s.session)
-
-		_, err := uploader.Upload(&s3manager.UploadInput{
-			Key:                  aws.String(path),
-			Bucket:               aws.String(s.bucket),
-			Body:                 reader,
-			ServerSideEncryption: aws.String("AES256"),
-		})
-		if err != nil {
-			logEntry.WithError(err).Error("Failed to upload file")
-
-			_ = writer.Close()
-			_ = reader.Close()
-		}
-	}()
-
-	return newSnappyWriteCloser(writer)
+	return filepath.Join(s.dir, date, database, collection+extension)
 }
 
-func (s *s3StorageService) Reader(date, database, collection string) io.ReadCloser {
-	path := filepath.Join(s.dir, date, database, collection+extension)
+func (s *s3StorageService) Upload(date, database, collection string, reader io.Reader) error {
+	path := s.getFilePath(date, database, collection)
 
-	logEntry := log.WithField("path", path)
-	logEntry.Info("Downloading file...")
+	uploader := s3manager.NewUploader(s.session)
 
+	_, err := uploader.Upload(&s3manager.UploadInput{
+		Key:                  aws.String(path),
+		Bucket:               aws.String(s.bucket),
+		Body:                 reader,
+		ServerSideEncryption: aws.String("AES256"),
+	})
+	return err
+}
+
+func (s *s3StorageService) Download(date, database, collection string, writer io.Writer) error {
+	path := s.getFilePath(date, database, collection)
+
+	downloader := s3manager.NewDownloader(s.session, func(d *s3manager.Downloader) {
+		d.Concurrency = 1
+	})
+
+	_, err := downloader.Download(pipeWriterAt{writer}, &s3.GetObjectInput{
+		Key:    aws.String(path),
+		Bucket: aws.String(s.bucket),
+	})
+	return err
+}
+
+func newPipe(op operation) (io.ReadCloser, io.WriteCloser) {
 	reader, writer := io.Pipe()
 
-	go func() {
-		defer writer.Close()
+	if op == uploadOperation {
+		return reader, newSnappyWriteCloser(writer)
+	}
 
-		downloader := s3manager.NewDownloader(s.session, func(d *s3manager.Downloader) {
-			d.Concurrency = 1
-		})
-
-		_, err := downloader.Download(pipeWriterAt{writer}, &s3.GetObjectInput{
-			Key:    aws.String(path),
-			Bucket: aws.String(s.bucket),
-		})
-		if err != nil {
-			logEntry.WithError(err).Error("Failed to download file")
-		}
-	}()
-
-	return newSnappyReadCloser(reader)
+	return newSnappyReadCloser(reader), writer
 }
 
 type snappyWriteCloser struct {

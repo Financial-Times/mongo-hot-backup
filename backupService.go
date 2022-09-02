@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type backupService interface {
-	Backup(collections []dbColl) error
-	Restore(dateDir string, collections []dbColl) error
+	Backup(ctx context.Context, collections []dbColl) error
+	Restore(ctx context.Context, dateDir string, collections []dbColl) error
 }
 
 type dbColl struct {
@@ -35,21 +38,56 @@ type backupResult struct {
 	Collection dbColl
 }
 
-func (m *mongoBackupService) Backup(collections []dbColl) error {
+func (m *mongoBackupService) Backup(ctx context.Context, collections []dbColl) error {
 	date := formattedNow()
 	for _, coll := range collections {
-		if err := m.backup(date, coll); err != nil {
+		if err := m.backup(ctx, date, coll); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (m *mongoBackupService) backup(date string, coll dbColl) error {
-	w := m.storageService.Writer(date, coll.database, coll.collection)
-	defer w.Close()
+func (m *mongoBackupService) backup(ctx context.Context, date string, coll dbColl) error {
+	reader, writer := newPipe(uploadOperation)
+	defer func() {
+		_ = writer.Close()
+		_ = reader.Close()
+	}()
 
-	if err := m.dbService.DumpCollectionTo(coll.database, coll.collection, w); err != nil {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	logEntry := log.
+		WithField("database", coll.database).
+		WithField("collection", coll.collection)
+
+	go func() {
+		logEntry.Info("Uploading collection...")
+
+		err := m.storageService.Upload(date, coll.database, coll.collection, reader)
+		if err != nil {
+			logEntry.WithError(err).Error("Failed to upload collection")
+
+			cancel()
+			return
+		}
+
+		logEntry.Info("Collection uploaded successfully")
+	}()
+
+	start := time.Now().UTC()
+	logEntry.Info("Saving collection...")
+
+	errCh := make(chan error)
+
+	go func() {
+		errCh <- m.dbService.SaveCollection(ctx, coll.database, coll.collection, writer)
+	}()
+
+	if err := <-errCh; err != nil {
+		logEntry.WithError(err).Error("Saving collection failed")
+
 		result := backupResult{
 			Timestamp:  time.Now().UTC(),
 			Collection: coll,
@@ -59,6 +97,8 @@ func (m *mongoBackupService) backup(date string, coll dbColl) error {
 		return fmt.Errorf("dumping failed for %s/%s: %v", coll.database, coll.collection, err)
 	}
 
+	logEntry.Infof("Collection successfully saved. Duration: %v", time.Since(start))
+
 	result := backupResult{
 		Success:    true,
 		Timestamp:  time.Now().UTC(),
@@ -67,20 +107,61 @@ func (m *mongoBackupService) backup(date string, coll dbColl) error {
 	return m.statusKeeper.Save(result)
 }
 
-func (m *mongoBackupService) Restore(date string, collections []dbColl) error {
+func (m *mongoBackupService) Restore(ctx context.Context, date string, collections []dbColl) error {
 	for _, coll := range collections {
-		if err := m.restore(date, coll); err != nil {
+		if err := m.restore(ctx, date, coll); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (m *mongoBackupService) restore(date string, coll dbColl) error {
-	r := m.storageService.Reader(date, coll.database, coll.collection)
-	defer r.Close()
+func (m *mongoBackupService) restore(ctx context.Context, date string, coll dbColl) error {
+	reader, writer := newPipe(downloadOperation)
+	defer func() {
+		_ = reader.Close()
+		_ = writer.Close()
+	}()
 
-	return m.dbService.RestoreCollectionFrom(coll.database, coll.collection, r)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	logEntry := log.
+		WithField("database", coll.database).
+		WithField("collection", coll.collection)
+
+	go func() {
+		logEntry.Info("Downloading collection...")
+
+		err := m.storageService.Download(date, coll.database, coll.collection, writer)
+		if err != nil {
+			logEntry.WithError(err).Error("Failed to download collection")
+
+			cancel()
+			return
+		}
+
+		logEntry.Info("Collection downloaded successfully")
+	}()
+
+	start := time.Now().UTC()
+	logEntry.Info("Restoring collection...")
+
+	errCh := make(chan error)
+
+	go func() {
+		errCh <- m.dbService.RestoreCollection(ctx, coll.database, coll.collection, reader)
+	}()
+
+	if err := <-errCh; err != nil {
+		logEntry.WithError(err).Error("Restoring collection failed")
+
+		return err
+	}
+
+	logEntry.Infof("Finished restoration. Duration: %v", time.Since(start))
+
+	return nil
 }
 
 func formattedNow() string {

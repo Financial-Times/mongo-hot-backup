@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -93,7 +94,17 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v", err)
 			}
-			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{}, time.Duration(*mongoTimeout)*time.Second, time.Duration(*rateLimit)*time.Millisecond, *batchLimit)
+
+			timeout := time.Duration(*mongoTimeout) * time.Second
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			defer cancel()
+
+			mongoClient, err := newMongoClient(ctx, *connStr, timeout)
+			if err != nil {
+				log.WithError(err).Fatal("Error establishing mongo connection")
+			}
+
+			dbService := newMongoService(mongoClient, &defaultBsonService{}, time.Duration(*rateLimit)*time.Millisecond, *batchLimit)
 			statusKeeper, err := newBoltStatusKeeper(*dbPath)
 			if err != nil {
 				log.Fatalf("failed setting up to read or write scheduled backup status results: %v", err)
@@ -130,7 +141,17 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v", err)
 			}
-			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{}, time.Duration(*mongoTimeout)*time.Second, time.Duration(*rateLimit)*time.Millisecond, *batchLimit)
+
+			timeout := time.Duration(*mongoTimeout) * time.Second
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			defer cancel()
+
+			mongoClient, err := newMongoClient(ctx, *connStr, timeout)
+			if err != nil {
+				log.WithError(err).Fatal("Error establishing mongo connection")
+			}
+
+			dbService := newMongoService(mongoClient, &defaultBsonService{}, time.Duration(*rateLimit)*time.Millisecond, *batchLimit)
 			statusKeeper, err := newBoltStatusKeeper(*dbPath)
 			if err != nil {
 				log.Fatalf("failed setting up to read or write scheduled backup status results: %v", err)
@@ -144,7 +165,7 @@ func main() {
 
 			storageService := newS3StorageService(*s3bucket, *s3dir, sess)
 			backupService := newMongoBackupService(dbService, storageService, statusKeeper)
-			if err := backupService.Backup(parsedColls); err != nil {
+			if err := backupService.Backup(context.Background(), parsedColls); err != nil {
 				log.Fatalf("backup failed : %v", err)
 			}
 		}
@@ -161,10 +182,17 @@ func main() {
 			if err != nil {
 				log.Fatalf("error parsing collections parameter: %v", err)
 			}
-			dbService := newMongoService(*connStr, &labixMongo{}, &defaultBsonService{}, time.Duration(*mongoTimeout)*time.Second, time.Duration(*rateLimit)*time.Millisecond, *batchLimit)
+
+			timeout := time.Duration(*mongoTimeout) * time.Second
+			ctx, cancel := context.WithTimeout(context.Background(), timeout)
+			defer cancel()
+
+			mongoClient, err := newMongoClient(ctx, *connStr, timeout)
 			if err != nil {
-				log.Fatalf("failed setting up to read or write scheduled backup status results: %v", err)
+				log.WithError(err).Fatal("Error establishing mongo connection")
 			}
+
+			dbService := newMongoService(mongoClient, &defaultBsonService{}, time.Duration(*rateLimit)*time.Millisecond, *batchLimit)
 
 			sess, err := session.NewSession()
 			if err != nil {
@@ -173,7 +201,7 @@ func main() {
 
 			storageService := newS3StorageService(*s3bucket, *s3dir, sess)
 			backupService := newMongoBackupService(dbService, storageService, &boltStatusKeeper{})
-			if err := backupService.Restore(*dateDir, parsedColls); err != nil {
+			if err := backupService.Restore(context.Background(), *dateDir, parsedColls); err != nil {
 				log.Fatalf("restore failed : %v", err)
 			}
 		}

@@ -1,90 +1,95 @@
 package main
 
 import (
+	"context"
 	"time"
 
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type mongoLib interface {
-	DialWithTimeout(url string, timeout time.Duration) (mongoSession, error)
-}
-
-type labixMongo struct{}
-
-func (m *labixMongo) DialWithTimeout(url string, timeout time.Duration) (mongoSession, error) {
-	session, err := mgo.DialWithTimeout(url, timeout)
-	if err != nil {
-		return nil, err
-	}
-	session.SetSyncTimeout(timeout)
-	session.SetSocketTimeout(timeout)
-	session.SetPrefetch(1.0)
-	return &labixSession{session}, nil
+type closer interface {
+	Close(ctx context.Context) error
 }
 
 type mongoSession interface {
-	Close()
-	SnapshotIter(database, collection string, findQuery interface{}) mongoIter
-	RemoveAll(database, collection string, removeQuery interface{}) error
-	Bulk(database, collection string) mongoBulk
+	FindAll(ctx context.Context, database, collection string) (mongoCursor, error)
+	RemoveAll(ctx context.Context, database, collection string) error
+	BulkWrite(ctx context.Context, database, collection string, models []mongo.WriteModel) error
+
+	closer
 }
 
-type labixSession struct {
-	session *mgo.Session
-}
-
-func (s *labixSession) Close() {
-	s.session.Close()
-}
-
-func (s *labixSession) SnapshotIter(database, collection string, findQuery interface{}) mongoIter {
-	return &labixIter{s.session.DB(database).C(collection).Find(findQuery).Snapshot().Iter()}
-}
-
-func (s *labixSession) RemoveAll(database, collection string, removeQuery interface{}) error {
-	_, err := s.session.DB(database).C(collection).RemoveAll(nil)
-	return err
-}
-
-func (s *labixSession) Bulk(database, collection string) mongoBulk {
-	return &labixBulk{s.session.DB(database).C(collection).Bulk()}
-}
-
-type mongoBulk interface {
-	Run() error
-	Insert(data []byte)
-}
-
-type labixBulk struct {
-	bulk *mgo.Bulk
-}
-
-func (b *labixBulk) Run() error {
-	_, err := b.bulk.Run()
-	return err
-}
-
-func (b *labixBulk) Insert(data []byte) {
-	b.bulk.Insert(bson.Raw{Data: data})
-}
-
-type mongoIter interface {
-	Next() ([]byte, bool)
+type mongoCursor interface {
+	Next(ctx context.Context) bool
+	Current() []byte
 	Err() error
+
+	closer
 }
 
-type labixIter struct {
-	iter *mgo.Iter
+type cursor struct {
+	*mongo.Cursor
 }
 
-func (i *labixIter) Next() ([]byte, bool) {
-	result := &bson.Raw{}
-	hasNext := i.iter.Next(result)
-	return result.Data, hasNext
+func (c *cursor) Current() []byte {
+	return c.Cursor.Current
 }
 
-func (i *labixIter) Err() error {
-	return i.iter.Err()
+type mongoClient struct {
+	client *mongo.Client
+}
+
+func newMongoClient(ctx context.Context, uri string, timeout time.Duration) (*mongoClient, error) {
+	opts := options.Client().
+		ApplyURI(uri).
+		SetSocketTimeout(timeout)
+
+	client, err := mongo.Connect(ctx, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return &mongoClient{
+		client: client,
+	}, nil
+}
+
+func (m mongoClient) FindAll(ctx context.Context, database, collection string) (mongoCursor, error) {
+	cur, err := m.client.
+		Database(database).
+		Collection(collection).
+		Find(ctx, bson.D{})
+	if err != nil {
+		return nil, err
+	}
+
+	return &cursor{cur}, nil
+}
+
+func (m mongoClient) RemoveAll(ctx context.Context, database, collection string) error {
+	_, err := m.client.
+		Database(database).
+		Collection(collection).
+		DeleteMany(ctx, bson.D{})
+	return err
+}
+
+func (m mongoClient) BulkWrite(ctx context.Context, database, collection string, models []mongo.WriteModel) error {
+	opts := options.BulkWrite().SetOrdered(false)
+
+	_, err := m.client.
+		Database(database).
+		Collection(collection).
+		BulkWrite(ctx, models, opts)
+
+	return err
+}
+
+func (m mongoClient) Close(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, time.Second*10)
+	defer cancel()
+
+	return m.client.Disconnect(ctx)
 }

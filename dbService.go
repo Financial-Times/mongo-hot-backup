@@ -7,90 +7,66 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/time/rate"
 )
 
 type dbService interface {
-	DumpCollectionTo(database, collection string, writer io.Writer) error
-	RestoreCollectionFrom(database, collection string, reader io.Reader) error
+	SaveCollection(ctx context.Context, database, collection string, writer io.Writer) error
+	RestoreCollection(ctx context.Context, database, collection string, reader io.Reader) error
 }
 
 type mongoService struct {
-	connectionString string
-	mgoLib           mongoLib
-	bsonService      bsonService
-	mongoTimeout     time.Duration
-	rateLimit        time.Duration
-	batchLimit       int
+	session     mongoSession
+	bsonService bsonService
+	rateLimit   time.Duration
+	batchLimit  int
 }
 
-func newMongoService(connectionString string, mgoLib mongoLib, bsonService bsonService, mongoTimeout time.Duration, rateLimit time.Duration, batchLimit int) *mongoService {
+func newMongoService(mongoClient mongoSession, bsonService bsonService, rateLimit time.Duration, batchLimit int) *mongoService {
 	return &mongoService{
-		connectionString: connectionString,
-		mgoLib:           mgoLib,
-		bsonService:      bsonService,
-		mongoTimeout:     mongoTimeout,
-		rateLimit:        rateLimit,
-		batchLimit:       batchLimit,
+		session:     mongoClient,
+		bsonService: bsonService,
+		rateLimit:   rateLimit,
+		batchLimit:  batchLimit,
 	}
 }
 
-func (m *mongoService) DumpCollectionTo(database, collection string, writer io.Writer) error {
-	session, err := m.mgoLib.DialWithTimeout(m.connectionString, m.mongoTimeout)
+func (m *mongoService) SaveCollection(ctx context.Context, database, collection string, writer io.Writer) error {
+	cur, err := m.session.FindAll(ctx, database, collection)
 	if err != nil {
-		return fmt.Errorf("Coulnd't dial mongo session: %v", err)
+		return fmt.Errorf("couldn't obtain iterator over collection=%v/%v: %v", database, collection, err)
 	}
 
-	defer session.Close()
+	defer func() {
+		_ = cur.Close(context.Background())
+	}()
 
-	start := time.Now().UTC()
-	log.Infof("backing up %s/%s", database, collection)
-
-	iter := session.SnapshotIter(database, collection, nil)
-	err = iter.Err()
-	if err != nil {
-		return fmt.Errorf("Couldn't obtain iterator over collection=%v/%v: %v", database, collection, err)
-	}
-	for {
-		result, hasNext := iter.Next()
-		if !hasNext {
-			break
-		}
-		_, err := writer.Write(result)
-		if err != nil {
+	for cur.Next(ctx) {
+		if _, err = writer.Write(cur.Current()); err != nil {
 			return err
 		}
 	}
 
-	log.Infof("backing up finished for %s/%s. duration=%v", database, collection, time.Since(start))
-	err = iter.Err()
-	if err != nil {
-		return fmt.Errorf("Error while iterating over collection=%v/%v noticed only at the end: %v", database, collection, err)
+	if err = cur.Err(); err != nil {
+		return fmt.Errorf("error while iterating over collection=%v/%v noticed only at the end: %v", database, collection, err)
 	}
 	return nil
 }
 
-func (m *mongoService) RestoreCollectionFrom(database, collection string, reader io.Reader) error {
-	session, err := m.mgoLib.DialWithTimeout(m.connectionString, 0)
-	if err != nil {
-		return fmt.Errorf("error while dialing mongo session: %v", err)
-	}
-	defer session.Close()
-
-	err = m.clearCollection(session, database, collection)
+func (m *mongoService) RestoreCollection(ctx context.Context, database, collection string, reader io.Reader) error {
+	err := m.session.RemoveAll(ctx, database, collection)
 	if err != nil {
 		return fmt.Errorf("error while clearing collection=%v/%v: %v", database, collection, err)
 	}
-
-	start := time.Now().UTC()
-	log.Infof("starting restore of %s/%s", database, collection)
-
-	bulk := session.Bulk(database, collection)
 
 	var batchBytes int
 	batchStart := time.Now().UTC()
 
 	limiter := rate.NewLimiter(rate.Every(m.rateLimit), 1)
+
+	var models []mongo.WriteModel
 
 	for {
 		next, err := m.bsonService.ReadNextBSON(reader)
@@ -105,39 +81,30 @@ func (m *mongoService) RestoreCollectionFrom(database, collection string, reader
 		// the limit, write the batch out now. 15000000 is intended to be within the
 		// expected 16MB limit
 		if batchBytes > 0 && batchBytes+len(next) > m.batchLimit {
-			err = bulk.Run()
-			if err != nil {
-				return fmt.Errorf("error while writing bulk: %v", err)
+			if err = m.session.BulkWrite(ctx, database, collection, models); err != nil {
+				return fmt.Errorf("error while writing bulk: %w", err)
 			}
 
 			var duration = time.Since(batchStart)
 			log.Infof("Written bulk restore batch for %s/%s. Took %v", database, collection, duration)
 
 			// rate limit between writes to prevent overloading MongoDB
-			limiter.Wait(context.Background())
+			_ = limiter.Wait(context.Background())
 
-			bulk = session.Bulk(database, collection)
+			models = nil
 			batchBytes = 0
 			batchStart = time.Now().UTC()
 		}
 
-		bulk.Insert(next)
+		document := bson.Raw(next)
+		models = append(models, mongo.NewInsertOneModel().SetDocument(document))
 
 		batchBytes += len(next)
 	}
-	err = bulk.Run()
-	if err != nil {
-		return fmt.Errorf("error while writing bulk: %v", err)
+
+	if err = m.session.BulkWrite(ctx, database, collection, models); err != nil {
+		return fmt.Errorf("error while writing bulk: %w", err)
 	}
-	log.Infof("finished restore of %s/%s. Duration: %v", database, collection, time.Since(start))
+
 	return nil
-}
-
-func (m *mongoService) clearCollection(session mongoSession, database, collection string) error {
-	start := time.Now().UTC()
-	log.Infof("clearing collection %s/%s", database, collection)
-	err := session.RemoveAll(database, collection, nil)
-	log.Infof("finished clearing collection %s/%s. Duration : %v", database, collection, time.Since(start))
-
-	return err
 }
