@@ -102,13 +102,13 @@ type mockStorageService struct {
 	mock.Mock
 }
 
-func (m *mockStorageService) Upload(date, database, collection string, reader io.Reader) error {
-	args := m.Called(date, database, collection, reader)
+func (m *mockStorageService) Upload(ctx context.Context, date, database, collection string, reader io.Reader) error {
+	args := m.Called(ctx, date, database, collection, reader)
 	return args.Error(0)
 }
 
-func (m *mockStorageService) Download(date, database, collection string, writer io.Writer) error {
-	args := m.Called(date, database, collection, writer)
+func (m *mockStorageService) Download(ctx context.Context, date, database, collection string, writer io.Writer) error {
+	args := m.Called(ctx, date, database, collection, writer)
 	return args.Error(0)
 }
 

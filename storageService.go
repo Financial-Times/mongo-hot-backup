@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"io"
 	"path/filepath"
 
@@ -19,8 +20,8 @@ const (
 )
 
 type storageService interface {
-	Upload(date, database, collection string, reader io.Reader) error
-	Download(date, database, collection string, writer io.Writer) error
+	Upload(ctx context.Context, date, database, collection string, reader io.Reader) error
+	Download(ctx context.Context, date, database, collection string, writer io.Writer) error
 }
 
 type s3StorageService struct {
@@ -43,12 +44,12 @@ func (s *s3StorageService) getFilePath(date, database, collection string) string
 	return filepath.Join(s.dir, date, database, collection+extension)
 }
 
-func (s *s3StorageService) Upload(date, database, collection string, reader io.Reader) error {
+func (s *s3StorageService) Upload(ctx context.Context, date, database, collection string, reader io.Reader) error {
 	path := s.getFilePath(date, database, collection)
 
 	uploader := s3manager.NewUploader(s.session)
 
-	_, err := uploader.Upload(&s3manager.UploadInput{
+	_, err := uploader.UploadWithContext(ctx, &s3manager.UploadInput{
 		Key:                  aws.String(path),
 		Bucket:               aws.String(s.bucket),
 		Body:                 reader,
@@ -57,14 +58,14 @@ func (s *s3StorageService) Upload(date, database, collection string, reader io.R
 	return err
 }
 
-func (s *s3StorageService) Download(date, database, collection string, writer io.Writer) error {
+func (s *s3StorageService) Download(ctx context.Context, date, database, collection string, writer io.Writer) error {
 	path := s.getFilePath(date, database, collection)
 
 	downloader := s3manager.NewDownloader(s.session, func(d *s3manager.Downloader) {
 		d.Concurrency = 1
 	})
 
-	_, err := downloader.Download(pipeWriterAt{writer}, &s3.GetObjectInput{
+	_, err := downloader.DownloadWithContext(ctx, pipeWriterAt{writer}, &s3.GetObjectInput{
 		Key:    aws.String(path),
 		Bucket: aws.String(s.bucket),
 	})

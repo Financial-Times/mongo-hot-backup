@@ -6,6 +6,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 )
 
 type backupService interface {
@@ -49,43 +50,33 @@ func (m *mongoBackupService) Backup(ctx context.Context, collections []dbColl) e
 }
 
 func (m *mongoBackupService) backup(ctx context.Context, date string, coll dbColl) error {
-	reader, writer := newPipe(uploadOperation)
-	defer func() {
-		_ = writer.Close()
-		_ = reader.Close()
-	}()
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	start := time.Now().UTC()
 
 	logEntry := log.
 		WithField("database", coll.database).
 		WithField("collection", coll.collection)
 
-	go func() {
-		logEntry.Info("Uploading collection...")
-
-		err := m.storageService.Upload(date, coll.database, coll.collection, reader)
-		if err != nil {
-			logEntry.WithError(err).Error("Failed to upload collection")
-
-			cancel()
-			return
-		}
-
-		logEntry.Info("Collection uploaded successfully")
-	}()
-
-	start := time.Now().UTC()
 	logEntry.Info("Saving collection...")
 
-	errCh := make(chan error)
-
-	go func() {
-		errCh <- m.dbService.SaveCollection(ctx, coll.database, coll.collection, writer)
+	reader, writer := newPipe(uploadOperation)
+	defer func() {
+		_ = reader.Close()
 	}()
 
-	if err := <-errCh; err != nil {
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		return m.storageService.Upload(ctx, date, coll.database, coll.collection, reader)
+	})
+	g.Go(func() error {
+		defer func() {
+			_ = writer.Close()
+		}()
+
+		return m.dbService.SaveCollection(ctx, coll.database, coll.collection, writer)
+	})
+
+	if err := g.Wait(); err != nil {
 		logEntry.WithError(err).Error("Saving collection failed")
 
 		result := backupResult{
@@ -117,43 +108,33 @@ func (m *mongoBackupService) Restore(ctx context.Context, date string, collectio
 }
 
 func (m *mongoBackupService) restore(ctx context.Context, date string, coll dbColl) error {
-	reader, writer := newPipe(downloadOperation)
-	defer func() {
-		_ = reader.Close()
-		_ = writer.Close()
-	}()
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	start := time.Now().UTC()
 
 	logEntry := log.
 		WithField("database", coll.database).
 		WithField("collection", coll.collection)
 
-	go func() {
-		logEntry.Info("Downloading collection...")
-
-		err := m.storageService.Download(date, coll.database, coll.collection, writer)
-		if err != nil {
-			logEntry.WithError(err).Error("Failed to download collection")
-
-			cancel()
-			return
-		}
-
-		logEntry.Info("Collection downloaded successfully")
-	}()
-
-	start := time.Now().UTC()
 	logEntry.Info("Restoring collection...")
 
-	errCh := make(chan error)
-
-	go func() {
-		errCh <- m.dbService.RestoreCollection(ctx, coll.database, coll.collection, reader)
+	reader, writer := newPipe(downloadOperation)
+	defer func() {
+		_ = reader.Close()
 	}()
 
-	if err := <-errCh; err != nil {
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		defer func() {
+			_ = writer.Close()
+		}()
+
+		return m.storageService.Download(ctx, date, coll.database, coll.collection, writer)
+	})
+	g.Go(func() error {
+		return m.dbService.RestoreCollection(ctx, coll.database, coll.collection, reader)
+	})
+
+	if err := g.Wait(); err != nil {
 		logEntry.WithError(err).Error("Restoring collection failed")
 
 		return err

@@ -13,15 +13,9 @@ func TestBackup_Ok(t *testing.T) {
 	//nolint: staticcheck
 	ctx := context.WithValue(context.Background(), "source", "test")
 	mockedStorageService := new(mockStorageService)
-	mockedStorageService.On("Upload", mock.AnythingOfType("string"), "database1", "collection1", mock.AnythingOfType("*io.PipeReader")).Return(nil)
+	mockedStorageService.On("Upload", mock.MatchedBy(isTestContext), mock.AnythingOfType("string"), "database1", "collection1", mock.AnythingOfType("*io.PipeReader")).Return(nil)
 	mockedMongoService := new(mockMongoService)
-	mockedMongoService.On("SaveCollection", mock.MatchedBy(func(ctx context.Context) bool {
-		if value := ctx.Value("source"); value == "test" {
-			return true
-		}
-
-		return false
-	}), "database1", "collection1", mock.AnythingOfType("*main.snappyWriteCloser")).Return(nil)
+	mockedMongoService.On("SaveCollection", mock.MatchedBy(isTestContext), "database1", "collection1", mock.AnythingOfType("*main.snappyWriteCloser")).Return(nil)
 	mockedStatusKeeper := new(mockStatusKeeper)
 	mockedStatusKeeper.On("Save",
 		mock.MatchedBy(func(result backupResult) bool {
@@ -40,15 +34,9 @@ func TestBackup_ErrorOnDump(t *testing.T) {
 	//nolint: staticcheck
 	ctx := context.WithValue(context.Background(), "source", "test")
 	mockedStorageService := new(mockStorageService)
-	mockedStorageService.On("Upload", mock.AnythingOfType("string"), "database1", "collection1", mock.AnythingOfType("*io.PipeReader")).Return(nil)
+	mockedStorageService.On("Upload", mock.MatchedBy(isTestContext), mock.AnythingOfType("string"), "database1", "collection1", mock.AnythingOfType("*io.PipeReader")).Return(nil)
 	mockedMongoService := new(mockMongoService)
-	mockedMongoService.On("SaveCollection", mock.MatchedBy(func(ctx context.Context) bool {
-		if value := ctx.Value("source"); value == "test" {
-			return true
-		}
-
-		return false
-	}), "database1", "collection1", mock.AnythingOfType("*main.snappyWriteCloser")).Return(fmt.Errorf("couldn't dump db"))
+	mockedMongoService.On("SaveCollection", mock.MatchedBy(isTestContext), "database1", "collection1", mock.AnythingOfType("*main.snappyWriteCloser")).Return(fmt.Errorf("couldn't dump db"))
 	mockedStatusKeeper := new(mockStatusKeeper)
 	mockedStatusKeeper.On("Save",
 		mock.MatchedBy(func(result backupResult) bool {
@@ -68,15 +56,9 @@ func TestBackup_ErrorOnSavingStatus(t *testing.T) {
 	//nolint: staticcheck
 	ctx := context.WithValue(context.Background(), "source", "test")
 	mockedStorageService := new(mockStorageService)
-	mockedStorageService.On("Upload", mock.AnythingOfType("string"), "database1", "collection1", mock.AnythingOfType("*io.PipeReader")).Return(nil)
+	mockedStorageService.On("Upload", mock.MatchedBy(isTestContext), mock.AnythingOfType("string"), "database1", "collection1", mock.AnythingOfType("*io.PipeReader")).Return(nil)
 	mockedMongoService := new(mockMongoService)
-	mockedMongoService.On("SaveCollection", mock.MatchedBy(func(ctx context.Context) bool {
-		if value := ctx.Value("source"); value == "test" {
-			return true
-		}
-
-		return false
-	}), "database1", "collection1", mock.AnythingOfType("*main.snappyWriteCloser")).Return(nil)
+	mockedMongoService.On("SaveCollection", mock.MatchedBy(isTestContext), "database1", "collection1", mock.AnythingOfType("*main.snappyWriteCloser")).Return(nil)
 	mockedStatusKeeper := new(mockStatusKeeper)
 	mockedStatusKeeper.On("Save",
 		mock.MatchedBy(func(result backupResult) bool {
@@ -96,15 +78,9 @@ func TestRestore_OK(t *testing.T) {
 	//nolint: staticcheck
 	ctx := context.WithValue(context.Background(), "source", "test")
 	mockedStorageService := new(mockStorageService)
-	mockedStorageService.On("Download", "2017-09-04T12-40-36", "database1", "collection1", mock.AnythingOfType("*io.PipeWriter")).Return(nil)
+	mockedStorageService.On("Download", mock.MatchedBy(isTestContext), "2017-09-04T12-40-36", "database1", "collection1", mock.AnythingOfType("*io.PipeWriter")).Return(nil)
 	mockedMongoService := new(mockMongoService)
-	mockedMongoService.On("RestoreCollection", mock.MatchedBy(func(ctx context.Context) bool {
-		if value := ctx.Value("source"); value == "test" {
-			return true
-		}
-
-		return false
-	}), "database1", "collection1", mock.AnythingOfType("*main.snappyReadCloser")).Return(nil)
+	mockedMongoService.On("RestoreCollection", mock.MatchedBy(isTestContext), "database1", "collection1", mock.AnythingOfType("*main.snappyReadCloser")).Return(nil)
 
 	backupService := newMongoBackupService(mockedMongoService, mockedStorageService, nil)
 	err := backupService.Restore(ctx, "2017-09-04T12-40-36", []dbColl{{"database1", "collection1"}})
@@ -116,19 +92,21 @@ func TestRestore_ErrorOnRestore(t *testing.T) {
 	//nolint: staticcheck
 	ctx := context.WithValue(context.Background(), "source", "test")
 	mockedStorageService := new(mockStorageService)
-	mockedStorageService.On("Download", "2017-09-04T12-40-36", "database1", "collection1", mock.AnythingOfType("*io.PipeWriter")).Return(nil)
+	mockedStorageService.On("Download", mock.MatchedBy(isTestContext), "2017-09-04T12-40-36", "database1", "collection1", mock.AnythingOfType("*io.PipeWriter")).Return(nil)
 	mockedMongoService := new(mockMongoService)
-	mockedMongoService.On("RestoreCollection", mock.MatchedBy(func(ctx context.Context) bool {
-		if value := ctx.Value("source"); value == "test" {
-			return true
-		}
-
-		return false
-	}), "database1", "collection1", mock.AnythingOfType("*main.snappyReadCloser")).Return(fmt.Errorf("error while restoring"))
+	mockedMongoService.On("RestoreCollection", mock.MatchedBy(isTestContext), "database1", "collection1", mock.AnythingOfType("*main.snappyReadCloser")).Return(fmt.Errorf("error while restoring"))
 
 	backupService := newMongoBackupService(mockedMongoService, mockedStorageService, nil)
 	err := backupService.Restore(ctx, "2017-09-04T12-40-36", []dbColl{{"database1", "collection1"}})
 
 	assert.Error(t, err)
 	assert.EqualError(t, err, "error while restoring")
+}
+
+func isTestContext(ctx context.Context) bool {
+	if value := ctx.Value("source"); value == "test" {
+		return true
+	}
+
+	return false
 }
