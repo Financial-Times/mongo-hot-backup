@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -42,6 +43,7 @@ type mongoClient struct {
 }
 
 func newMongoClient(ctx context.Context, uri string, timeout time.Duration) (*mongoClient, error) {
+	uri = fmt.Sprintf("mongodb://%s", uri)
 	opts := options.Client().
 		ApplyURI(uri).
 		SetSocketTimeout(timeout)
