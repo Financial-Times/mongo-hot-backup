@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
+
 	log "github.com/sirupsen/logrus"
-	cron "gopkg.in/robfig/cron.v2"
+	"gopkg.in/robfig/cron.v2"
 )
 
 type scheduler interface {
-	SheduleBackups(colls []dbColl, cronExpr string, runAtStart bool)
+	ScheduleBackups(colls []dbColl, cronExpr string, runAtStart bool)
 }
 
 type cronScheduler struct {
@@ -23,9 +25,11 @@ type scheduledJob struct {
 	colls []dbColl
 }
 
-func (s *cronScheduler) SheduleBackups(colls []dbColl, cronExpr string, runAtStart bool) {
+func (s *cronScheduler) ScheduleBackups(colls []dbColl, cronExpr string, runAtStart bool) {
+	ctx := context.Background()
+
 	if runAtStart {
-		err := s.backupService.Backup(colls)
+		err := s.backupService.Backup(ctx, colls)
 		if err != nil {
 			log.Errorf("Error making scheduled backup: %v", err)
 		}
@@ -35,8 +39,7 @@ func (s *cronScheduler) SheduleBackups(colls []dbColl, cronExpr string, runAtSta
 	c := cron.New()
 	var jobs []scheduledJob
 	eID, _ := c.AddFunc(cronExpr, func() {
-		err := s.backupService.Backup(colls)
-		if err != nil {
+		if err := s.backupService.Backup(ctx, colls); err != nil {
 			log.Errorf("Error making scheduled backup: %v", err)
 		}
 		for _, job := range jobs {

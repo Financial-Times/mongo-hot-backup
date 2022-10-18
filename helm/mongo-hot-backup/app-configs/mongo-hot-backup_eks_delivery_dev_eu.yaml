@@ -1,6 +1,6 @@
 service:
   name: mongo-hot-backup
-
+  s3Bucket: "com.ft.upp.mongo-backup-dev"
 
 replicaCount: 1
 

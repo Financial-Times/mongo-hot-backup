@@ -26,7 +26,7 @@ func newScheduleHTTPService(scheduler scheduler, healthService *healthService) *
 }
 
 func (h *scheduleHTTPService) ScheduleAndServe(colls []dbColl, cronExpr string, runAtStart bool) {
-	go h.scheduler.SheduleBackups(colls, cronExpr, runAtStart)
+	go h.scheduler.ScheduleBackups(colls, cronExpr, runAtStart)
 
 	hc := health.TimedHealthCheck{
 		HealthCheck: health.HealthCheck{

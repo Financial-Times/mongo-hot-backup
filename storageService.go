@@ -1,62 +1,85 @@
 package main
 
 import (
+	"context"
 	"io"
-	"net/http"
 	"path/filepath"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/klauspost/compress/snappy"
-	"github.com/rlmcpherson/s3gof3r"
-	log "github.com/sirupsen/logrus"
 )
 
-const extension = ".bson.snappy"
+type operation int
+
+const (
+	uploadOperation operation = iota
+	downloadOperation
+)
 
 type storageService interface {
-	Writer(date, database, collection string) (io.WriteCloser, error)
-	Reader(date, database, collection string) (io.ReadCloser, error)
+	Upload(ctx context.Context, date, database, collection string, reader io.Reader) error
+	Download(ctx context.Context, date, database, collection string, writer io.Writer) error
 }
 
 type s3StorageService struct {
-	s3bucket string
-	s3dir    string
-	s3       *s3gof3r.S3
+	bucket  string
+	dir     string
+	session *session.Session
 }
 
-func newS3StorageService(s3bucket, s3dir, s3domain, accessKey, secretKey string) *s3StorageService {
+func newS3StorageService(bucket, dir string, session *session.Session) *s3StorageService {
 	return &s3StorageService{
-		s3bucket,
-		s3dir,
-		s3gof3r.New(
-			s3domain,
-			s3gof3r.Keys{
-				AccessKey: accessKey,
-				SecretKey: secretKey,
-			},
-		),
+		bucket:  bucket,
+		dir:     dir,
+		session: session,
 	}
 }
 
-func (s *s3StorageService) Writer(date, database, collection string) (io.WriteCloser, error) {
-	path := filepath.Join(s.s3dir, date, database, collection+extension)
-	log.Infof("saving to path=%s bucket=%s", path, s.s3bucket)
-	b := s.s3.Bucket(s.s3bucket)
-	w, err := b.PutWriter(path, http.Header{"x-amz-server-side-encryption": []string{"AES256"}}, nil)
-	if err != nil {
-		return nil, err
-	}
-	return newSnappyWriteCloser(snappy.NewBufferedWriter(w), w), nil
+func (s *s3StorageService) getFilePath(date, database, collection string) string {
+	const extension = ".bson.snappy"
+
+	return filepath.Join(s.dir, date, database, collection+extension)
 }
 
-func (s *s3StorageService) Reader(date, database, collection string) (io.ReadCloser, error) {
-	path := filepath.Join(s.s3dir, date, database, collection+extension)
+func (s *s3StorageService) Upload(ctx context.Context, date, database, collection string, reader io.Reader) error {
+	path := s.getFilePath(date, database, collection)
 
-	rc, _, err := s.s3.Bucket(s.s3bucket).GetReader(path, nil)
-	if err != nil {
-		return nil, err
+	uploader := s3manager.NewUploader(s.session)
+
+	_, err := uploader.UploadWithContext(ctx, &s3manager.UploadInput{
+		Key:                  aws.String(path),
+		Bucket:               aws.String(s.bucket),
+		Body:                 reader,
+		ServerSideEncryption: aws.String("AES256"),
+	})
+	return err
+}
+
+func (s *s3StorageService) Download(ctx context.Context, date, database, collection string, writer io.Writer) error {
+	path := s.getFilePath(date, database, collection)
+
+	downloader := s3manager.NewDownloader(s.session, func(d *s3manager.Downloader) {
+		d.Concurrency = 1
+	})
+
+	_, err := downloader.DownloadWithContext(ctx, pipeWriterAt{writer}, &s3.GetObjectInput{
+		Key:    aws.String(path),
+		Bucket: aws.String(s.bucket),
+	})
+	return err
+}
+
+func newPipe(op operation) (io.ReadCloser, io.WriteCloser) {
+	reader, writer := io.Pipe()
+
+	if op == uploadOperation {
+		return reader, newSnappyWriteCloser(writer)
 	}
 
-	return newSnappyReadCloser(snappy.NewReader(rc), rc), nil
+	return newSnappyReadCloser(reader), writer
 }
 
 type snappyWriteCloser struct {
@@ -64,10 +87,10 @@ type snappyWriteCloser struct {
 	writeCloser  io.WriteCloser
 }
 
-func newSnappyWriteCloser(snappyWriter *snappy.Writer, writeCloser io.WriteCloser) *snappyWriteCloser {
+func newSnappyWriteCloser(writeCloser io.WriteCloser) *snappyWriteCloser {
 	return &snappyWriteCloser{
-		snappyWriter,
-		writeCloser,
+		snappyWriter: snappy.NewBufferedWriter(writeCloser),
+		writeCloser:  writeCloser,
 	}
 }
 
@@ -87,10 +110,10 @@ type snappyReadCloser struct {
 	readCloser   io.ReadCloser
 }
 
-func newSnappyReadCloser(snappyReader *snappy.Reader, readCloser io.ReadCloser) *snappyReadCloser {
+func newSnappyReadCloser(readCloser io.ReadCloser) *snappyReadCloser {
 	return &snappyReadCloser{
-		snappyReader,
-		readCloser,
+		snappyReader: snappy.NewReader(readCloser),
+		readCloser:   readCloser,
 	}
 }
 
@@ -100,4 +123,12 @@ func (src *snappyReadCloser) Read(p []byte) (int, error) {
 
 func (src *snappyReadCloser) Close() error {
 	return src.readCloser.Close()
+}
+
+type pipeWriterAt struct {
+	w io.Writer
+}
+
+func (pw pipeWriterAt) WriteAt(p []byte, offset int64) (n int, err error) {
+	return pw.w.Write(p)
 }

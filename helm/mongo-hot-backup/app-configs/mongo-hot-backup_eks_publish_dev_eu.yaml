@@ -1,0 +1,8 @@
+service:
+  name: mongo-hot-backup
+  s3Bucket: "com.ft.upp.mongo-backup-dev"
+
+replicaCount: 1
+
+env:
+  MONGODB_COLLECTIONS: native-store/v1-metadata,native-store/video,native-store/video-metadata,native-store/pac-metadata,native-store/universal-content,native-store/pages

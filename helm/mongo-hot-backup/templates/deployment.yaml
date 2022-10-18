@@ -49,6 +49,7 @@ spec:
 {{- end }}
       imagePullSecrets:
         - name: nexusregistry
+      serviceAccountName: {{ .Values.serviceAccountName }}
       containers:
       - name: {{ .Values.service.name }}
         image: "{{ .Values.image.repository }}:{{ .Chart.Version }}"
@@ -59,8 +60,6 @@ spec:
             configMapKeyRef:
               name: global-config
               key: mongo.addresses
-        - name: S3_DOMAIN
-          value: {{ .Values.service.s3Domain }}
         - name: S3_BUCKET
           value: {{ .Values.service.s3Bucket }}
         - name: S3_DIR
@@ -68,16 +67,6 @@ spec:
             configMapKeyRef:
               name: global-config
               key: environment
-        - name: AWS_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: global-secrets
-              key: aws.access_key_id
-        - name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: global-secrets
-              key: aws.secret_access_key
         - name: MONGODB_COLLECTIONS
           value: {{ .Values.env.MONGODB_COLLECTIONS }}
         - name: CRON

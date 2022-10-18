@@ -5,7 +5,6 @@ service:
   name: "" # The name of the service, should be defined in the specific app-configs folder.
   hasHealthcheck: "true"
   volumeMountPath: data/mongo-hot-backup
-  s3Domain: s3-eu-west-1.amazonaws.com
   s3Bucket: "com.ft.upp.mongo-backup"
   cron: 0 15 * * *
 
@@ -23,3 +22,5 @@ resources:
   limits:
     cpu: 500m
     memory: 2560Mi
+
+serviceAccountName: eksctl-mongo-hot-backup-serviceaccount
