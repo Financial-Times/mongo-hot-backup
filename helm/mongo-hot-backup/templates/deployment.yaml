@@ -62,6 +62,8 @@ spec:
               key: mongo.addresses
         - name: S3_BUCKET
           value: {{ .Values.service.s3Bucket }}
+        - name: S3_BUCKET_REGION
+          value: {{ .Values.service.s3BucketRegion }}
         - name: S3_DIR
           valueFrom:
             configMapKeyRef:

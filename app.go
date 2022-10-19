@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	cli "github.com/jawher/mow.cli"
 	log "github.com/sirupsen/logrus"
@@ -31,6 +32,12 @@ func main() {
 		Desc:   "s3 bucket name",
 		EnvVar: "S3_BUCKET",
 		Value:  "com.ft.coco-mongo-backup.prod",
+	})
+	s3BucketRegion := app.String(cli.StringOpt{
+		Name:   "s3-bucket-region",
+		Desc:   "s3 bucket region",
+		EnvVar: "S3_BUCKET_REGION",
+		Value:  "eu-west-1",
 	})
 	s3dir := app.String(cli.StringOpt{
 		Name:   "base-dir",
@@ -111,7 +118,7 @@ func main() {
 			}
 			defer statusKeeper.Close()
 
-			sess, err := session.NewSession()
+			sess, err := session.NewSession(aws.NewConfig().WithRegion(*s3BucketRegion))
 			if err != nil {
 				log.WithError(err).Fatal("Creating AWS session failed")
 			}
@@ -158,7 +165,7 @@ func main() {
 			}
 			defer statusKeeper.Close()
 
-			sess, err := session.NewSession()
+			sess, err := session.NewSession(aws.NewConfig().WithRegion(*s3BucketRegion))
 			if err != nil {
 				log.WithError(err).Fatal("Creating AWS session failed")
 			}
@@ -194,7 +201,7 @@ func main() {
 
 			dbService := newMongoService(mongoClient, &defaultBsonService{}, time.Duration(*rateLimit)*time.Millisecond, *batchLimit)
 
-			sess, err := session.NewSession()
+			sess, err := session.NewSession(aws.NewConfig().WithRegion(*s3BucketRegion))
 			if err != nil {
 				log.WithError(err).Fatal("Creating AWS session failed")
 			}

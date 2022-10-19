@@ -6,6 +6,7 @@ service:
   hasHealthcheck: "true"
   volumeMountPath: data/mongo-hot-backup
   s3Bucket: "com.ft.upp.mongo-backup"
+  s3BucketRegion: "eu-west-1"
   cron: 0 15 * * *
 
 replicaCount: 1
