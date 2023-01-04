@@ -84,6 +84,7 @@ func (m *mongoService) RestoreCollection(ctx context.Context, database, collecti
 			//log.Infof("Starting wtire operation for %s/%s with models: %s",
 			//	database, collection, models)
 			if err = m.session.BulkWrite(ctx, database, collection, models); err != nil {
+				log.Infof("Bulk write failed with %v", err)
 				return fmt.Errorf("error while writing bulk: %w", err)
 			}
 
