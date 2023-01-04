@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
 )
 
 type closer interface {
@@ -79,9 +80,18 @@ func (m mongoClient) RemoveAll(ctx context.Context, database, collection string)
 }
 
 func (m mongoClient) BulkWrite(ctx context.Context, database, collection string, models []mongo.WriteModel) error {
+
+	readOpts, err := readpref.New(readpref.PrimaryMode, readpref.WithMaxStaleness(time.Second))
+	if err != nil {
+		return err
+	}
+	if err = m.client.Ping(ctx, readOpts); err != nil {
+		return err
+	}
+
 	opts := options.BulkWrite().SetOrdered(false)
 
-	_, err := m.client.
+	_, err = m.client.
 		Database(database).
 		Collection(collection).
 		BulkWrite(ctx, models, opts)

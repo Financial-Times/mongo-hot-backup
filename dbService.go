@@ -81,6 +81,8 @@ func (m *mongoService) RestoreCollection(ctx context.Context, database, collecti
 		// the limit, write the batch out now. 15000000 is intended to be within the
 		// expected 16MB limit
 		if batchBytes > 0 && batchBytes+len(next) > m.batchLimit {
+			log.Infof("Starting wtire operation for %s/%s with models: %s",
+				database, collection, models)
 			if err = m.session.BulkWrite(ctx, database, collection, models); err != nil {
 				return fmt.Errorf("error while writing bulk: %w", err)
 			}
