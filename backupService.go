@@ -66,14 +66,34 @@ func (m *mongoBackupService) backup(ctx context.Context, date string, coll dbCol
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
-		return m.storageService.Upload(ctx, date, coll.database, coll.collection, reader)
+		errs := make(chan error, 1)
+		go func() {
+			errs <- m.storageService.Upload(ctx, date, coll.database, coll.collection, reader)
+		}()
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context canceled")
+		case err := <-errs:
+			return err
+		}
 	})
 	g.Go(func() error {
 		defer func() {
 			_ = writer.Close()
 		}()
 
-		return m.dbService.SaveCollection(ctx, coll.database, coll.collection, writer)
+		errs := make(chan error, 1)
+		go func() {
+			errs <- m.dbService.SaveCollection(ctx, coll.database, coll.collection, writer)
+		}()
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context canceled")
+		case err := <-errs:
+			return err
+		}
 	})
 
 	if err := g.Wait(); err != nil {
@@ -128,10 +148,30 @@ func (m *mongoBackupService) restore(ctx context.Context, date string, coll dbCo
 			_ = writer.Close()
 		}()
 
-		return m.storageService.Download(ctx, date, coll.database, coll.collection, writer)
+		errs := make(chan error, 1)
+		go func() {
+			errs <- m.storageService.Download(ctx, date, coll.database, coll.collection, writer)
+		}()
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context canceled")
+		case err := <-errs:
+			return err
+		}
 	})
 	g.Go(func() error {
-		return m.dbService.RestoreCollection(ctx, coll.database, coll.collection, reader)
+		errs := make(chan error, 1)
+		go func() {
+			errs <- m.dbService.RestoreCollection(ctx, coll.database, coll.collection, reader)
+		}()
+
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context canceled")
+		case err := <-errs:
+			return err
+		}
 	})
 
 	if err := g.Wait(); err != nil {
