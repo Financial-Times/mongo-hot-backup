@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/klauspost/compress/snappy"
+	log "github.com/sirupsen/logrus"
 )
 
 type operation int
@@ -65,10 +66,13 @@ func (s *s3StorageService) Download(ctx context.Context, date, database, collect
 		d.Concurrency = 1
 	})
 
+	log.Infof("Starting download: %s", collection)
 	_, err := downloader.DownloadWithContext(ctx, pipeWriterAt{writer}, &s3.GetObjectInput{
 		Key:    aws.String(path),
 		Bucket: aws.String(s.bucket),
 	})
+	log.Infof("Ending download: %s", collection)
+
 	return err
 }
 

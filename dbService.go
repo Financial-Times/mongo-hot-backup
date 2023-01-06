@@ -71,6 +71,7 @@ func (m *mongoService) RestoreCollection(ctx context.Context, database, collecti
 	for {
 		next, err := m.bsonService.ReadNextBSON(reader)
 		if err != nil {
+			log.Infof("Read error: %v", err)
 			return fmt.Errorf("error while reading bson: %v", err)
 		}
 		if next == nil {
@@ -85,7 +86,7 @@ func (m *mongoService) RestoreCollection(ctx context.Context, database, collecti
 			//	database, collection, models)
 			if err = m.session.BulkWrite(ctx, database, collection, models); err != nil {
 				log.Infof("Bulk write failed with %v", err)
-				return fmt.Errorf("error while writing bulk: %w", err)
+				return fmt.Errorf("error while writing batch bulk: %w", err)
 			}
 
 			var duration = time.Since(batchStart)
@@ -106,6 +107,7 @@ func (m *mongoService) RestoreCollection(ctx context.Context, database, collecti
 	}
 
 	if err = m.session.BulkWrite(ctx, database, collection, models); err != nil {
+		log.Infof("Last batch bulk write failed with %v", err)
 		return fmt.Errorf("error while writing bulk: %w", err)
 	}
 

@@ -121,19 +121,27 @@ func (m *mongoBackupService) restore(ctx context.Context, date string, coll dbCo
 		_ = reader.Close()
 	}()
 
-	g, ctx := errgroup.WithContext(ctx)
+	g, gCtx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
 		defer func() {
 			_ = writer.Close()
+			logEntry.Info("G1 close writer")
 		}()
 
-		return m.storageService.Download(ctx, date, coll.database, coll.collection, writer)
+		logEntry.Info("G1 start")
+		err := m.storageService.Download(gCtx, date, coll.database, coll.collection, writer)
+		logEntry.Infof("G1 end, err: %v", err)
+		return err
 	})
 	g.Go(func() error {
-		return m.dbService.RestoreCollection(ctx, coll.database, coll.collection, reader)
+		logEntry.Info("G2 start")
+		err := m.dbService.RestoreCollection(gCtx, coll.database, coll.collection, reader)
+		logEntry.Infof("G2 end, err: %v", err)
+		return err
 	})
 
+	logEntry.Info("Weittting, s 'e'")
 	if err := g.Wait(); err != nil {
 		logEntry.WithError(err).Error("Restoring collection failed")
 
