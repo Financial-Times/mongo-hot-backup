@@ -66,34 +66,20 @@ func (m *mongoBackupService) backup(ctx context.Context, date string, coll dbCol
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
-		errs := make(chan error, 1)
-		go func() {
+		f := func(errs chan error) {
 			errs <- m.storageService.Upload(ctx, date, coll.database, coll.collection, reader)
-		}()
-
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("context canceled")
-		case err := <-errs:
-			return err
 		}
+		return createFunctionWithContext(ctx, f)
 	})
 	g.Go(func() error {
 		defer func() {
 			_ = writer.Close()
 		}()
 
-		errs := make(chan error, 1)
-		go func() {
+		f := func(errs chan error) {
 			errs <- m.dbService.SaveCollection(ctx, coll.database, coll.collection, writer)
-		}()
-
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("context canceled")
-		case err := <-errs:
-			return err
 		}
+		return createFunctionWithContext(ctx, f)
 	})
 
 	if err := g.Wait(); err != nil {
@@ -148,30 +134,16 @@ func (m *mongoBackupService) restore(ctx context.Context, date string, coll dbCo
 			_ = writer.Close()
 		}()
 
-		errs := make(chan error, 1)
-		go func() {
+		f := func(errs chan error) {
 			errs <- m.storageService.Download(ctx, date, coll.database, coll.collection, writer)
-		}()
-
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("context canceled")
-		case err := <-errs:
-			return err
 		}
+		return createFunctionWithContext(ctx, f)
 	})
 	g.Go(func() error {
-		errs := make(chan error, 1)
-		go func() {
+		f := func(errs chan error) {
 			errs <- m.dbService.RestoreCollection(ctx, coll.database, coll.collection, reader)
-		}()
-
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("context canceled")
-		case err := <-errs:
-			return err
 		}
+		return createFunctionWithContext(ctx, f)
 	})
 
 	if err := g.Wait(); err != nil {
@@ -187,4 +159,16 @@ func (m *mongoBackupService) restore(ctx context.Context, date string, coll dbCo
 
 func formattedNow() string {
 	return time.Now().UTC().Format(dateFormat)
+}
+
+func createFunctionWithContext(ctx context.Context, f func(errs chan error)) error {
+	errs := make(chan error, 1)
+	go f(errs)
+
+	select {
+	case <-ctx.Done():
+		return fmt.Errorf("context canceled")
+	case err := <-errs:
+		return err
+	}
 }
