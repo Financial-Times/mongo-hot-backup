@@ -143,6 +143,7 @@ func TestBackup_ErrorOnSavingStatus(t *testing.T) {
 
 func TestBackup_ErrorOnlyInUpload(t *testing.T) {
 	start := time.Now()
+	//nolint: staticcheck
 	ctx := context.WithValue(context.Background(), "source", "test")
 	mockedStorageService := new(mockStorageService)
 	mockedStorageService.On("Upload",
@@ -178,6 +179,7 @@ func TestBackup_ErrorOnlyInUpload(t *testing.T) {
 
 func TestBackup_ErrorOnlyInSave(t *testing.T) {
 	start := time.Now()
+	//nolint: staticcheck
 	ctx := context.WithValue(context.Background(), "source", "test")
 	mockedStorageService := new(mockStorageService)
 	mockedStorageService.On("Upload",
@@ -263,6 +265,7 @@ func TestRestore_ErrorOnRestoringCollection(t *testing.T) {
 
 func TestRestore_ErrorDuringRestorationInRestore(t *testing.T) {
 	start := time.Now()
+	//nolint: staticcheck
 	ctx := context.WithValue(context.Background(), "source", "test")
 	mockedStorageService := new(mockStorageService)
 	mockedStorageService.On("Download",
@@ -290,6 +293,7 @@ func TestRestore_ErrorDuringRestorationInRestore(t *testing.T) {
 
 func TestRestore_ErrorDuringRestorationInDownload(t *testing.T) {
 	start := time.Now()
+	//nolint: staticcheck
 	ctx := context.WithValue(context.Background(), "source", "test")
 	mockedStorageService := new(mockStorageService)
 	mockedStorageService.On("Download",
