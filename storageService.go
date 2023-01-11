@@ -60,18 +60,20 @@ func (s *s3StorageService) Upload(ctx context.Context, date, database, collectio
 }
 
 func (s *s3StorageService) Download(ctx context.Context, date, database, collection string, writer io.Writer) error {
+	log.Infof("D1 path creation")
 	path := s.getFilePath(date, database, collection)
 
+	log.Infof("D1 downloader creation")
 	downloader := s3manager.NewDownloader(s.session, func(d *s3manager.Downloader) {
 		d.Concurrency = 1
 	})
 
-	log.Infof("Starting download: %s", collection)
+	log.Infof("D1 Starting download: %s", collection)
 	_, err := downloader.DownloadWithContext(ctx, pipeWriterAt{writer}, &s3.GetObjectInput{
 		Key:    aws.String(path),
 		Bucket: aws.String(s.bucket),
 	})
-	log.Infof("Ending download: %s", collection)
+	log.Infof("D1 Ending download: %s", collection)
 
 	return err
 }

@@ -125,8 +125,11 @@ func (m *mongoBackupService) restore(ctx context.Context, date string, coll dbCo
 
 	g.Go(func() error {
 		defer func() {
-			_ = writer.Close()
-			logEntry.Info("G1 close writer")
+			logEntry.Info("G1 writer close start")
+			if err := writer.Close(); err != nil {
+				logEntry.Info("G1 writer close failed with: %e", err)
+			}
+			logEntry.Info("G1 writer close end")
 		}()
 
 		logEntry.Info("G1 start")
