@@ -56,6 +56,12 @@ func (m *mongoService) SaveCollection(ctx context.Context, database, collection 
 }
 
 func (m *mongoService) RestoreCollection(ctx context.Context, database, collection string, reader io.Reader) error {
+
+	if collection == "internalcomponents" {
+		time.Sleep(time.Second * 3)
+		return fmt.Errorf("test fail")
+	}
+
 	err := m.session.RemoveAll(ctx, database, collection)
 	if err != nil {
 		return fmt.Errorf("error while clearing collection=%v/%v: %v", database, collection, err)
