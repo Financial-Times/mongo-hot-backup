@@ -66,6 +66,10 @@ func (m *mongoBackupService) backup(ctx context.Context, date string, coll dbCol
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
+		//f := func(errs chan error) {
+		//	errs <- m.storageService.Upload(ctx, date, coll.database, coll.collection, reader)
+		//}
+		//return createFunctionWithContext(ctx, f)
 		return m.storageService.Upload(ctx, date, coll.database, coll.collection, reader)
 	})
 	g.Go(func() error {
@@ -73,6 +77,10 @@ func (m *mongoBackupService) backup(ctx context.Context, date string, coll dbCol
 			_ = writer.Close()
 		}()
 
+		//f := func(errs chan error) {
+		//	errs <- m.dbService.SaveCollection(ctx, coll.database, coll.collection, writer)
+		//}
+		//return createFunctionWithContext(ctx, f)
 		return m.dbService.SaveCollection(ctx, coll.database, coll.collection, writer)
 	})
 
@@ -117,9 +125,6 @@ func (m *mongoBackupService) restore(ctx context.Context, date string, coll dbCo
 	logEntry.Info("Restoring collection...")
 
 	reader, writer := newPipe(downloadOperation)
-	defer func() {
-		_ = reader.Close()
-	}()
 
 	g, gCtx := errgroup.WithContext(ctx)
 
@@ -127,17 +132,31 @@ func (m *mongoBackupService) restore(ctx context.Context, date string, coll dbCo
 		defer func() {
 			logEntry.Info("G1 writer close start")
 			if err := writer.Close(); err != nil {
-				logEntry.Info("G1 writer close failed with: %e", err)
+				logEntry.WithError(err).Error("Closing writer failed")
 			}
 			logEntry.Info("G1 writer close end")
 		}()
-
+		//f := func(errs chan error) {
+		//	errs <- m.storageService.Download(cctx, date, coll.database, coll.collection, writer)
+		//}
+		//return createFunctionWithContext(cctx, f)
 		logEntry.Info("G1 start")
 		err := m.storageService.Download(gCtx, date, coll.database, coll.collection, writer)
 		logEntry.Infof("G1 end, err: %v", err)
 		return err
 	})
 	g.Go(func() error {
+		defer func() {
+			logEntry.Info("G2 reader close start")
+			if err := reader.Close(); err != nil {
+				logEntry.WithError(err).Error(" G2 Closing reader failed")
+			}
+			logEntry.Info("G2 reader close end")
+		}()
+		//f := func(errs chan error) {
+		//errs <- m.dbService.RestoreCollection(gCtx, coll.database, coll.collection, reader)
+		//}
+		//return createFunctionWithContext(ctx, f)
 		logEntry.Info("G2 start")
 		err := m.dbService.RestoreCollection(gCtx, coll.database, coll.collection, reader)
 		logEntry.Infof("G2 end, err: %v", err)
