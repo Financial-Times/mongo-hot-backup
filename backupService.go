@@ -59,13 +59,14 @@ func (m *mongoBackupService) backup(ctx context.Context, date string, coll dbCol
 	logEntry.Info("Saving collection...")
 
 	reader, writer := newPipe(uploadOperation)
-	defer func() {
-		_ = reader.Close()
-	}()
 
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
+		defer func() {
+			_ = reader.Close()
+		}()
+
 		return m.storageService.Upload(ctx, date, coll.database, coll.collection, reader)
 	})
 	g.Go(func() error {
@@ -117,9 +118,6 @@ func (m *mongoBackupService) restore(ctx context.Context, date string, coll dbCo
 	logEntry.Info("Restoring collection...")
 
 	reader, writer := newPipe(downloadOperation)
-	defer func() {
-		_ = reader.Close()
-	}()
 
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -131,6 +129,10 @@ func (m *mongoBackupService) restore(ctx context.Context, date string, coll dbCo
 		return m.storageService.Download(ctx, date, coll.database, coll.collection, writer)
 	})
 	g.Go(func() error {
+		defer func() {
+			_ = reader.Close()
+		}()
+
 		return m.dbService.RestoreCollection(ctx, coll.database, coll.collection, reader)
 	})
 
