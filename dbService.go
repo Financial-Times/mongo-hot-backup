@@ -34,6 +34,9 @@ func newMongoService(mongoClient mongoSession, bsonService bsonService, rateLimi
 }
 
 func (m *mongoService) SaveCollection(ctx context.Context, database, collection string, writer io.Writer) error {
+
+	return fmt.Errorf("artificial save collection error")
+
 	cur, err := m.session.FindAll(ctx, database, collection)
 	if err != nil {
 		return fmt.Errorf("couldn't obtain iterator over collection=%v/%v: %v", database, collection, err)
