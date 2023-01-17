@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"path/filepath"
 
@@ -46,9 +45,6 @@ func (s *s3StorageService) getFilePath(date, database, collection string) string
 }
 
 func (s *s3StorageService) Upload(ctx context.Context, date, database, collection string, reader io.Reader) error {
-
-	return fmt.Errorf("simulated upload error")
-
 	path := s.getFilePath(date, database, collection)
 
 	uploader := s3manager.NewUploader(s.session)
