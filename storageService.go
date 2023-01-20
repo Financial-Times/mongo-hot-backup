@@ -65,11 +65,29 @@ func (s *s3StorageService) Download(ctx context.Context, date, database, collect
 		d.Concurrency = 1
 	})
 
-	_, err := downloader.DownloadWithContext(ctx, pipeWriterAt{writer}, &s3.GetObjectInput{
-		Key:    aws.String(path),
-		Bucket: aws.String(s.bucket),
-	})
-	return err
+	objects := []s3manager.BatchDownloadObject{
+		{
+			Object: &s3.GetObjectInput{
+				Key:    aws.String(path),
+				Bucket: aws.String(s.bucket),
+			},
+			Writer: pipeWriterAt{writer},
+		},
+	}
+	iter := &s3manager.DownloadObjectsIterator{Objects: objects}
+
+	errChan := make(chan error)
+
+	go func() {
+		errChan <- downloader.DownloadWithIterator(ctx, iter)
+	}()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-errChan:
+		return err
+	}
 }
 
 func newPipe(op operation) (io.ReadCloser, io.WriteCloser) {
