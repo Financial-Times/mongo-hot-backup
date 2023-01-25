@@ -4,7 +4,7 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/Financial-Times/mongo-hot-backup)](https://goreportcard.com/report/github.com/Financial-Times/mongo-hot-backup)
 [![Coverage Status](https://coveralls.io/repos/github/Financial-Times/mongo-hot-backup/badge.svg)](https://coveralls.io/github/Financial-Times/mongo-hot-backup)
 
-This tool can back up or restore MongoDB collections while DB is running to/from AWS S3.
+This tool can back up or restore DocumentDB collections while DB is running to/from AWS S3.
 
 It is configured to run scheduled backups by default.
 The state of backups is kept in a boltdb file at `/var/data/mongo-hot-backup/state.db`.
@@ -37,7 +37,9 @@ You need to be authenticated in the proper EKS cluster before executing the comm
     --image=nexus.in.ft.com:5000/coco/mongo-hot-backup:v3.2.0 \
     --restart="Never" \
     --overrides='{"apiVersion": "v1", "spec": {"imagePullSecrets": [{"name": "nexusregistry"}], "serviceAccountName": "eksctl-mongo-hot-backup-serviceaccount"}}' \
-    --env "MONGODB=mongodb-0.default.svc.cluster.local:27017,mongodb-1.default.svc.cluster.local:27017,mongodb-2.default.svc.cluster.local:27017" \
+    --env "DOCDB_CLUSTER_ADDRESS=upp-docdb-cluster.cluster-ci7tuksazqti.eu-west-1.docdb.amazonaws.com:27017" \
+    --env "DOCDB_USERNAME=<documentDB username>" \
+    --env "DOCDB_PASSWORD=<documentDB password>" \
     --env "S3_BUCKET=com.ft.upp.mongo-backup-dev" \
     --env "S3_DIR=upp-k8s-dev-delivery-eu" \
     --env "MONGODB_COLLECTIONS=upp-store/pages" \
@@ -51,9 +53,12 @@ You need to be authenticated in the proper EKS cluster before executing the comm
     --image=nexus.in.ft.com:5000/coco/mongo-hot-backup:v3.2.0 \
     --restart="Never" \
     --overrides='{"apiVersion": "v1", "spec": {"imagePullSecrets": [{"name": "nexusregistry"}], "serviceAccountName": "eksctl-mongo-hot-backup-serviceaccount"}}' \
-    --env "MONGODB=mongodb-0.default.svc.cluster.local:27017,mongodb-1.default.svc.cluster.local:27017,mongodb-2.default.svc.cluster.local:27017" \
+    --env "DOCDB_CLUSTER_ADDRESS=upp-docdb-cluster.cluster-ci7tuksazqti.eu-west-1.docdb.amazonaws.com:27017" \
+    --env "DOCDB_USERNAME=<documentDB username>" \
+    --env "DOCDB_PASSWORD=<documentDB password>" \
     --env "S3_BUCKET=com.ft.upp.mongo-backup-dev" \
     --env "S3_DIR=upp-k8s-dev-delivery-eu" \
+    --env "S3_BUCKET_REGION=eu-west-1" \
     --env "RATE_LIMIT=1000" \
     --env "BATCH_LIMIT=8000000" \
     --env "MONGODB_COLLECTIONS=upp-store/pages" \

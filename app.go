@@ -22,10 +22,22 @@ func main() {
 	app := cli.App("mongobackup", "Backup and restore mongodb collections to/from s3\nBackups are put in a directory structure /<base-dir>/<date>/database/collection")
 
 	connStr := app.String(cli.StringOpt{
-		Name:   "mongodb",
-		Desc:   "mongodb connection string",
-		EnvVar: "MONGODB",
-		Value:  "localhost:27017",
+		Name:   "docdb-cluster-address",
+		Desc:   "Address of the Document DB host",
+		EnvVar: "DOCDB_CLUSTER_ADDRESS",
+		Value:  "",
+	})
+	docDBUsername := app.String(cli.StringOpt{
+		Name:   "docdb-username",
+		Desc:   "Username for establishing a connection to Document DB",
+		EnvVar: "DOCDB_USERNAME",
+		Value:  "",
+	})
+	docDBPassword := app.String(cli.StringOpt{
+		Name:   "docdb-password",
+		Desc:   "Password for establishing a connection to Document DB",
+		EnvVar: "DOCDB_PASSWORD",
+		Value:  "",
 	})
 	s3bucket := app.String(cli.StringOpt{
 		Name:   "bucket",
@@ -106,7 +118,7 @@ func main() {
 			ctx, cancel := context.WithTimeout(context.Background(), timeout)
 			defer cancel()
 
-			mongoClient, err := newMongoClient(ctx, *connStr, timeout)
+			mongoClient, err := newMongoClient(ctx, *connStr, *docDBUsername, *docDBPassword, timeout)
 			if err != nil {
 				log.WithError(err).Fatal("Error establishing mongo connection")
 			}
@@ -153,7 +165,7 @@ func main() {
 			ctx, cancel := context.WithTimeout(context.Background(), timeout)
 			defer cancel()
 
-			mongoClient, err := newMongoClient(ctx, *connStr, timeout)
+			mongoClient, err := newMongoClient(ctx, *connStr, *docDBUsername, *docDBPassword, timeout)
 			if err != nil {
 				log.WithError(err).Fatal("Error establishing mongo connection")
 			}
@@ -194,7 +206,7 @@ func main() {
 			ctx, cancel := context.WithTimeout(context.Background(), timeout)
 			defer cancel()
 
-			mongoClient, err := newMongoClient(ctx, *connStr, timeout)
+			mongoClient, err := newMongoClient(ctx, *connStr, *docDBUsername, *docDBPassword, timeout)
 			if err != nil {
 				log.WithError(err).Fatal("Error establishing mongo connection")
 			}
