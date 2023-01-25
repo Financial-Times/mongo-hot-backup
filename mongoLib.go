@@ -2,12 +2,20 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"os"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+)
+
+const (
+	docDBConnStrTemplate = "mongodb://%s:%s@%s/?ssl=true&ssl_ca_certs=rds-combined-ca-bundle.pem&replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false"
+	caFilePath           = "rds-combined-ca-bundle.pem"
 )
 
 type closer interface {
@@ -42,11 +50,17 @@ type mongoClient struct {
 	client *mongo.Client
 }
 
-func newMongoClient(ctx context.Context, uri string, timeout time.Duration) (*mongoClient, error) {
-	uri = fmt.Sprintf("mongodb://%s", uri)
+func newMongoClient(ctx context.Context, uri, dbUser, dbPass string, timeout time.Duration) (*mongoClient, error) {
+	tlsConfig, err := getCustomTLSConfig(caFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	uri = fmt.Sprintf(docDBConnStrTemplate, dbUser, dbPass, uri)
 	opts := options.Client().
 		ApplyURI(uri).
-		SetSocketTimeout(timeout)
+		SetSocketTimeout(timeout).
+		SetTLSConfig(tlsConfig)
 
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
@@ -94,4 +108,22 @@ func (m mongoClient) Close(ctx context.Context) error {
 	defer cancel()
 
 	return m.client.Disconnect(ctx)
+}
+
+func getCustomTLSConfig(caFile string) (*tls.Config, error) {
+	tlsConfig := new(tls.Config)
+	certs, err := os.ReadFile(caFile)
+
+	if err != nil {
+		return nil, err
+	}
+
+	tlsConfig.RootCAs = x509.NewCertPool()
+	ok := tlsConfig.RootCAs.AppendCertsFromPEM(certs)
+
+	if !ok {
+		return nil, fmt.Errorf("failed parsing pem file")
+	}
+
+	return tlsConfig, nil
 }

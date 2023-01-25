@@ -55,11 +55,21 @@ spec:
         image: "{{ .Values.image.repository }}:{{ .Chart.Version }}"
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         env:
-        - name: MONGODB
+        - name: DOCDB_CLUSTER_ADDRESS
           valueFrom:
             configMapKeyRef:
               name: global-config
-              key: mongo.addresses
+              key: aws.documentdb.cluster.address
+        - name: DOCDB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: aws.doc-db.username
+        - name: DOCDB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: global-secrets
+              key: aws.doc-db.password
         - name: S3_BUCKET
           value: {{ .Values.service.s3Bucket }}
         - name: S3_BUCKET_REGION
