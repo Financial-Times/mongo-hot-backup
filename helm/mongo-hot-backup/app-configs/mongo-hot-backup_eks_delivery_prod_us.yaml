@@ -6,3 +6,5 @@ replicaCount: 1
 
 env:
   MONGODB_COLLECTIONS: upp-store/content,upp-store/internalcomponents,upp-store/notifications,upp-store/list-notifications,upp-store/complementarycontent,upp-store/pages
+
+leader: true
