@@ -13,7 +13,7 @@ require (
 	github.com/klauspost/compress v1.15.9
 	github.com/sirupsen/logrus v1.0.5
 	github.com/stretchr/testify v1.6.1
-	go.mongodb.org/mongo-driver v1.10.1
+	go.mongodb.org/mongo-driver v1.11.6
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/time v0.0.0-20170927054726-6dc17368e09b
 	gopkg.in/robfig/cron.v2 v2.0.0-20150107220207-be2e0b0deed5

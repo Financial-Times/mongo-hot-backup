@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	docDBConnStrTemplate = "mongodb://%s:%s@%s/?ssl=true&ssl_ca_certs=rds-combined-ca-bundle.pem&replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false"
+	docDBConnStrTemplate = "mongodb+srv://%s:%s@%s"
 	caFilePath           = "rds-combined-ca-bundle.pem"
 )
 
@@ -51,16 +51,10 @@ type mongoClient struct {
 }
 
 func newMongoClient(ctx context.Context, uri, dbUser, dbPass string, timeout time.Duration) (*mongoClient, error) {
-	tlsConfig, err := getCustomTLSConfig(caFilePath)
-	if err != nil {
-		return nil, err
-	}
-
 	uri = fmt.Sprintf(docDBConnStrTemplate, dbUser, dbPass, uri)
 	opts := options.Client().
 		ApplyURI(uri).
-		SetSocketTimeout(timeout).
-		SetTLSConfig(tlsConfig)
+		SetSocketTimeout(timeout)
 
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
