@@ -2,10 +2,7 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"os"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -15,7 +12,6 @@ import (
 
 const (
 	docDBConnStrTemplate = "mongodb+srv://%s:%s@%s"
-	caFilePath           = "rds-combined-ca-bundle.pem"
 )
 
 type closer interface {
@@ -102,22 +98,4 @@ func (m mongoClient) Close(ctx context.Context) error {
 	defer cancel()
 
 	return m.client.Disconnect(ctx)
-}
-
-func getCustomTLSConfig(caFile string) (*tls.Config, error) {
-	tlsConfig := new(tls.Config)
-	certs, err := os.ReadFile(caFile)
-
-	if err != nil {
-		return nil, err
-	}
-
-	tlsConfig.RootCAs = x509.NewCertPool()
-	ok := tlsConfig.RootCAs.AppendCertsFromPEM(certs)
-
-	if !ok {
-		return nil, fmt.Errorf("failed parsing pem file")
-	}
-
-	return tlsConfig, nil
 }
